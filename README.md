@@ -2,26 +2,26 @@
 
 [中文说明](./README.zh-CN.md)
 
-Rule-aware evidence auditing RAG system for safer pediatric medication QA.
+Rule-aware evidence auditing RAG system for safer pediatric medication question answering.
 
-MedAudit-RAG is a research prototype for auditing whether pediatric medication answers are supported by guideline evidence. It is not designed to replace doctors, generate prescriptions, or provide clinical treatment advice. The system retrieves evidence, generates constrained answers, audits answer faithfulness, and uses a TrustScore gate to decide whether to answer, refuse, or request human review.
+MedAudit-RAG is a research prototype for auditing whether pediatric medication answers are supported by traceable evidence from guidelines, consensus documents, drug labels, catalogs, and other admitted authoritative sources. It is not a clinical diagnosis system, prescription generator, or replacement for licensed clinicians.
 
-> Status: research prototype. The current implementation is a vector RAG + TrustScore baseline with FastAPI, LangGraph, ChromaDB, and a React frontend. Graph-enhanced evidence auditing and expert validation are planned future work.
+The current repository implements a vector RAG and TrustScore baseline. Graph-enhanced evidence auditing is a research direction under development, not a completed claim.
 
-## What It Does
+## Core Capabilities
 
-- Routes pediatric medication questions into `DETAIL`, `CONCEPT`, and `CONTEXT` intent types.
-- Retrieves evidence from multi-granularity guideline indexes.
-- Generates answers only from retrieved evidence.
-- Audits retrieval relevance, answer faithfulness, and source authority.
-- Applies TrustScore gating for supported answers, review-required cases, insufficient evidence, and boundary refusal.
-- Displays answer status, TrustScore breakdown, citations, source pages, and evidence snippets in the frontend.
+- Route pediatric medication questions into `DETAIL`, `CONCEPT`, and `CONTEXT` audit intents.
+- Retrieve evidence from multi-granularity guideline indexes.
+- Generate constrained answers from retrieved evidence only.
+- Audit retrieval relevance, answer faithfulness, and source authority.
+- Apply a TrustScore gate to choose supported answer, review required, insufficient evidence, or boundary refusal.
+- Display audit status, score breakdown, citations, source pages, and evidence snippets in the frontend.
 
-## Why It Matters
+## Medical Safety Boundary
 
-Pediatric medication QA is a high-risk and low-tolerance scenario. Incorrect dosage, frequency, route, age or weight boundary, off-label usage, and drug-combination claims may lead to unsafe suggestions. Standard RAG can reduce hallucination, but it can still retrieve weak evidence, repeat irrelevant snippets, or generate confident answers unsupported by the retrieved content.
+This project is for research, teaching, and evidence-audit method validation only.
 
-MedAudit-RAG focuses on answer auditing, not answer generation alone.
+It does not provide real clinical diagnosis, individualized prescriptions, or treatment advice. All medical claims must be grounded in retrieved evidence. If evidence is insufficient, mismatched, incomplete, or outside the allowed answer boundary, the system should refuse or request human review.
 
 ## Architecture
 
@@ -29,10 +29,10 @@ MedAudit-RAG focuses on answer auditing, not answer generation alone.
 User Query
     |
     v
-Router
+Router / Intent Normalizer
     |
     v
-Retriever
+Multi-granularity Retriever
     |
     v
 Constrained Generator
@@ -58,47 +58,37 @@ TrustScore = T * W_authority
 
 ## Tech Stack
 
-- Backend: FastAPI, Python
-- RAG workflow: LangGraph
+- Backend: Python, FastAPI
+- Workflow orchestration: LangGraph
 - Vector database: ChromaDB
 - Frontend: React, Ant Design, Vite
 - Streaming: Server-Sent Events
 - Testing: pytest
 
-## Current Repository Scope
+## Repository Scope
 
-The repository currently includes:
+The repository includes:
 
 - backend API routes for health checks, audit queries, and SSE streaming
-- router, retriever, generator, and auditor nodes
-- TrustScore calculation and source-authority weighting
-- guideline source admission scripts and manifest tracking
-- React frontend for displaying audit status and evidence
-- unit tests for parser, source preparation, and TrustScore behavior
+- router, retriever, generator, auditor, and TrustScore gate logic
+- guideline source admission and manifest tracking scripts
+- vector index rebuild and audit scripts
+- React frontend for audit interaction and evidence display
+- unit tests for parser, retriever behavior, streaming serialization, and TrustScore behavior
 
-The current baseline does not claim completed GraphRAG, clinical deployment, or expert medical validation.
+The repository does not commit raw guideline PDFs, local ChromaDB indexes, API keys, or personal planning notes.
 
 ## Knowledge Base and Source Admission
 
-Guideline PDFs are not committed to Git. Sources are tracked through a manifest before entering the formal index.
-
-Formal index path:
-
-```text
-backend/data/chroma_db/
-```
-
-Index status:
-
-```text
-backend/data/chroma_db/index_status.json
-```
-
-Source manifest:
+Formal sources are admitted through a manifest-based pipeline before indexing. The manifest is the source-of-truth for whether a document is approved for the knowledge base.
 
 ```text
 data/guidelines/source_manifest.json
+backend/data/chroma_db/
+backend/data/chroma_db/index_status.json
 ```
+
+The source admission workflow records source type, inclusion status, parsing diagnostics, checksum, and indexing status. Generated index files are reproducible local artifacts and are not committed to Git.
 
 ## Quick Start
 
@@ -139,9 +129,13 @@ npm install
 npm run dev
 ```
 
-## API and Output Shape
+A convenience script is also available on Windows:
 
-Main endpoints:
+```powershell
+.\start-dev.ps1
+```
+
+## API Endpoints
 
 ```text
 GET  /api/health
@@ -149,60 +143,40 @@ POST /api/audit/query
 POST /api/audit/query/stream
 ```
 
-The audit response is designed to expose:
+The audit response exposes normalized query, intent, answer/refusal text, TrustScore, score breakdown, retrieved evidence snippets, citation source, page number, and final gate decision.
 
-- normalized query and intent type
-- answer text or refusal message
-- TrustScore and score breakdown
-- retrieved evidence snippets
-- citation source and page
-- final decision such as supported answer, review required, insufficient evidence, or boundary refusal
+## Evaluation Direction
 
-## Evaluation Plan
+The planned evaluation is a guideline-grounded pediatric medication safety QA benchmark. Each sample should include:
 
-The planned benchmark is guideline-grounded pediatric medication safety QA. Each sample should include gold evidence, expected decision, allowed answer scope, and forbidden claims.
+- gold evidence source, page, and text span
+- expected decision
+- allowed answer scope
+- forbidden claims
+- risk labels
+- dataset, prompt, model, and knowledge-base versions
 
-Planned metrics include:
+Planned metrics include hallucination rate, unsupported claim rate, unsafe suggestion rate, refusal correctness, claim-evidence alignment, and evidence-source mismatch rate. Any future improvement claims must be backed by raw outputs, audit traces, confidence intervals, and statistical tests.
 
-- hallucination rate
-- unsupported claim rate
-- unsafe suggestion rate
-- refusal correctness
-- claim-evidence alignment precision and recall
-- evidence-source mismatch rate
+## Experiment Discipline
 
-Any future claim about reducing these errors should be backed by raw outputs, audit traces, confidence intervals, and statistical tests.
-
-## Current Research Status (2026-06-11)
-
-- Current phase: Phase 3. Task 3C, Dev50-v0.3 evidence backfilling, has been completed. The next task is Task 3D, freezing Dev50-v1.0 and running retrieval smoke tests.
-- Current knowledge base: KB-medium-v1. `source_manifest.json` records 25 candidate sources; 22 authoritative sources are included in the formal index, 2 large documents are deferred for full indexing, and 1 source is excluded because of source or quality concerns.
-- Current index state: `index_status.ready=true`, with `detail_128`, `concept_512`, and `context_1024` collections available.
-- Current development set: Dev50-v0.3-kb22, containing 50 samples. 42 samples have page-level `source/page/text_span` evidence, 4 samples are policy-rule cases, and 4 samples remain fail-closed missing-source cases.
-- Current boundary: this repository is still a research prototype and experimental baseline. It does not claim expert validation, clinical effectiveness, or real prescription capability.
-
-## Experiment Cost Control and Caching Discipline
-
-All future model experiments should be cost-aware, cacheable, and reproducible:
+All model experiments should be cost-aware, cacheable, and reproducible:
 
 1. Record `input_tokens`, `output_tokens`, and `estimated_cost` for every model or judge call.
-2. Persist all raw model outputs, not only parsed conclusions.
-3. Do not repeat a successful call when the same `sample_id + method + model + prompt_version` already exists.
-4. For reruns, execute failed cases only instead of rerunning the whole batch.
-5. Use pairwise judging, but first estimate token usage and cost on 10 samples.
-6. Keep evidence context to 2-4 evidence snippets; do not paste whole guideline pages into prompts.
-7. Write `prompt_version`, `dataset_version`, and `kb_version` into every output file.
-8. Preserve raw outputs, run parameters, random seeds, model versions, and timestamps for auditability.
+2. Persist raw model outputs before post-processing.
+3. Avoid rerunning the same `sample_id + method + model + prompt_version` if a valid cached output already exists.
+4. Rerun failed cases only instead of full batches when possible.
+5. Keep evidence context compact, usually 2-4 snippets.
+6. Write `prompt_version`, `dataset_version`, and `kb_version` into every output file.
 
-## Medical Safety Boundary
+## Research Status
 
-This project is for research, method validation, and medical evidence auditing only.
-
-It does not provide clinical diagnosis, individualized prescription, or treatment advice. All generated medical content must be grounded in retrieved guideline, consensus, catalog, or drug-label evidence. When evidence is insufficient, incomplete, mismatched, or outside the allowed answer boundary, the system should refuse or request human review.
+This repository is an active research prototype. Detailed phase status, task tracking, experiment notes, and findings are maintained under `revision/` rather than in the public README.
 
 ## Roadmap
 
-- Expand public and authoritative pediatric medication sources.
-- Build a guideline-grounded benchmark with gold evidence.
-- Compare vanilla LLM, naive RAG, multi-granularity RAG, TrustScore Gate, and future graph-enhanced methods.
-- Save raw outputs, audit traces, failure cases, confidence intervals, and statistical tests for paper writing.
+- Improve retrieval reliability and source/page precision.
+- Expand and audit the authoritative pediatric medication knowledge base.
+- Build and freeze guideline-grounded benchmark splits.
+- Compare vanilla LLM, naive RAG, multi-granularity RAG, TrustScore Gate, and graph-enhanced evidence auditing.
+- Preserve raw outputs, failure cases, confidence intervals, and statistical tests for manuscript writing.

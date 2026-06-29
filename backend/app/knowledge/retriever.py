@@ -64,6 +64,8 @@ _AUTHORITY_KEYWORD_MAP = {
     "肺炎支原体肺炎": "clinical_guideline",
     "社区获得性肺炎": "clinical_guideline",
     "内科分册": "clinical_guideline",
+    "指导原则": "clinical_guideline",
+    "NICE": "clinical_guideline",
     "guideline": "clinical_guideline",
     "超说明书": "expert_consensus",
     "专家共识": "expert_consensus",
@@ -81,6 +83,48 @@ _REQUIRED_TERM_GROUPS = [
     ("头孢",),
     ("静脉", "静点", "静注", "静滴", "静脉注射", "静脉滴注"),
 ]
+
+_COMBINATION_QUERY_TERMS = (
+    "同时", "联合", "联用", "合并", "多种", "两种", "三种", "交替", "一起",
+)
+_AUDIT_FIELD_QUERY_TERMS = (
+    "过敏史", "肝肾功能", "肝功能", "肾功能", "相互作用", "审方", "用药前", "监测",
+)
+_SOURCE_BOUNDARY_QUERY_TERMS = (
+    "基本药物目录", "目录", "作为依据", "剂量依据", "治疗依据",
+)
+_CATALOG_SOURCE_TERMS = (
+    "基本药物目录", "Essential_Medicines", "Essential Medicines", "Model_List",
+)
+_CLINICAL_SOURCE_TERMS = (
+    "诊疗指南", "诊疗规范", "指导原则", "NICE", "guideline", "Guideline",
+)
+_QUERY_EXPANSION_RULES = (
+    (
+        ("布洛芬", "对乙酰氨基酚", "退热", "发热"),
+        "ibuprofen paracetamol acetaminophen antipyretic fever simultaneously alternating distress next dose",
+    ),
+    (
+        ("止咳", "化痰", "祛痰", "咳嗽", "有痰"),
+        "acute cough mucolytic antitussive upper respiratory tract infection acute bronchitis",
+    ),
+    (
+        ("过敏史", "过敏", "用药前"),
+        "drug allergy allergy status prescribing dispensing administering penicillin cephalosporin",
+    ),
+    (
+        ("肝肾功能", "肝功能", "肾功能", "相互作用", "多种药物", "审方"),
+        "renal function liver function drug interaction medication review pharmacist prescription order",
+    ),
+    (
+        ("联合", "联用", "合并", "同时", "大环内酯", "头孢"),
+        "antimicrobial combination antibiotic combination adverse reactions macrolide cephalosporin",
+    ),
+    (
+        ("基本药物目录", "剂量依据", "治疗依据", "作为依据"),
+        "essential medicines list formulation dose evidence source scope",
+    ),
+)
 
 
 # ────────────────────────────────────────────
@@ -171,7 +215,8 @@ class MultiGranularityRetriever:
 
         # 生成查询向量
         logger.info(f"[Retriever] 查询: '{query[:50]}...' top_k={k}")
-        query_embedding = self._embed_fn([query])[0]
+        expanded_query = self._expand_query(query)
+        query_embedding = self._embed_fn([expanded_query])[0]
 
         # 确定检索哪些粒度
         if granularity is not None:
@@ -214,7 +259,8 @@ class MultiGranularityRetriever:
 
         # 权威度加权 + 排序
         for chunk in all_results:
-            chunk.final_score = chunk.relevance_score * chunk.authority_weight
+            base_score = chunk.relevance_score * chunk.authority_weight
+            chunk.final_score = self._adjust_score_for_query(query, chunk, base_score)
 
         all_results.sort(key=lambda c: c.final_score, reverse=True)
         all_results = self._apply_required_term_filter(query, all_results)
@@ -360,7 +406,72 @@ class MultiGranularityRetriever:
             content = getattr(chunk, "content", "") or ""
             if all(any(term in content for term in group) for group in required_groups):
                 filtered.append(chunk)
+        if not filtered and MultiGranularityRetriever._is_broad_review_query(query):
+            return chunks
         return filtered
+
+    @staticmethod
+    def _expand_query(query: str) -> str:
+        """Append compact bilingual audit terms for retrieval only."""
+        additions: list[str] = []
+        for triggers, expansion in _QUERY_EXPANSION_RULES:
+            if any(term in query for term in triggers):
+                additions.append(expansion)
+        if not additions:
+            return query
+        return f"{query} {' '.join(dict.fromkeys(additions))}"
+
+    @staticmethod
+    def _is_broad_review_query(query: str) -> bool:
+        return any(term in query for term in (
+            *_COMBINATION_QUERY_TERMS,
+            *_AUDIT_FIELD_QUERY_TERMS,
+            *_SOURCE_BOUNDARY_QUERY_TERMS,
+        ))
+
+    @staticmethod
+    def _adjust_score_for_query(query: str, chunk: RetrievedChunk, base_score: float) -> float:
+        """Query-aware reranking: keep catalog evidence from replacing safety guidance."""
+        score = base_score
+        source = chunk.source_file or ""
+        content = chunk.content or ""
+        source_text = f"{source} {content}"
+
+        is_catalog = any(term in source for term in _CATALOG_SOURCE_TERMS)
+        is_clinical = any(term in source for term in _CLINICAL_SOURCE_TERMS)
+        is_combination_query = any(term in query for term in _COMBINATION_QUERY_TERMS)
+        is_audit_query = any(term in query for term in _AUDIT_FIELD_QUERY_TERMS)
+        is_source_boundary_query = any(term in query for term in _SOURCE_BOUNDARY_QUERY_TERMS)
+
+        if is_source_boundary_query and is_catalog:
+            score *= 1.45
+        elif (is_combination_query or is_audit_query) and is_catalog:
+            score *= 0.45
+
+        if (is_combination_query or is_audit_query) and is_clinical:
+            score *= 1.12
+
+        if any(term in query for term in ("布洛芬", "对乙酰氨基酚", "退热", "发热")):
+            if any(term in source_text for term in ("NICE_NG143", "Fever", "paracetamol", "ibuprofen")):
+                score *= 1.65
+
+        if any(term in query for term in ("止咳", "化痰", "祛痰", "咳嗽", "有痰")):
+            if any(term in source_text for term in ("NICE_NG120", "acute cough", "mucolytic", "antitussive")):
+                score *= 1.65
+
+        if "过敏史" in query or "过敏" in query:
+            if any(term in source_text for term in ("NICE_CG183", "Drug_allergy", "drug allergy", "过敏史")):
+                score *= 1.6
+
+        if any(term in query for term in ("肝肾功能", "肝功能", "肾功能", "相互作用", "审方")):
+            if any(term in source_text for term in ("抗菌药物临床应用指导原则", "肝肾功能", "药师审方", "renal function")):
+                score *= 1.45
+
+        if is_combination_query:
+            if any(term in content for term in ("联合用药", "不良反应", "抗菌药物联合", "combination")):
+                score *= 1.35
+
+        return score
 
     def _get_authority_weight(self, filename: str) -> float:
         """根据文件名关键词返回对应的权威度权重"""

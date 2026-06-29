@@ -226,6 +226,8 @@ def test_retriever_maps_new_guideline_sources_to_authority_weights():
 
     assert retriever._get_authority_weight("儿童肺炎支原体肺炎诊疗指南（2023年版）.pdf") == 0.9
     assert retriever._get_authority_weight("儿童社区获得性肺炎诊疗规范（2019年版）.pdf") == 0.9
+    assert retriever._get_authority_weight("NICE_NG143_Fever_in_under_5s.pdf") == 0.9
+    assert retriever._get_authority_weight("抗菌药物临床应用指导原则（2015年版）.pdf") == 0.9
     assert retriever._get_authority_weight("国家基本药物目录（2018年版）.pdf") == 1.0
 
 
@@ -312,6 +314,76 @@ def test_retriever_requires_route_term_when_query_names_intravenous_use():
     )
 
     assert filtered == chunks[1:]
+
+
+def test_required_term_filter_relaxes_for_combination_review_query():
+    chunks = [
+        SimpleNamespace(content="联合用药通常采用2种药物联合，3种及3种以上药物联合仅适用于个别情况。"),
+        SimpleNamespace(content="联合用药后药物不良反应亦可能增多。"),
+    ]
+
+    filtered = MultiGranularityRetriever._apply_required_term_filter(
+        "儿童肺炎能否同时使用阿奇霉素、头孢、激素和雾化？",
+        chunks,
+    )
+
+    assert filtered == chunks
+
+
+def test_retriever_expands_antipyretic_query_with_english_aliases():
+    expanded = MultiGranularityRetriever._expand_query(
+        "儿童发热可以同时吃布洛芬和对乙酰氨基酚吗？"
+    )
+
+    assert "ibuprofen" in expanded
+    assert "paracetamol" in expanded
+    assert "simultaneously" in expanded
+
+
+def test_retriever_downranks_catalog_for_treatment_safety_query():
+    chunk = RetrievedChunk(
+        content="布洛芬列入基本药物目录。",
+        granularity=512,
+        distance=0.1,
+        relevance_score=0.9,
+        authority_weight=1.0,
+        final_score=0.9,
+        source_file="国家基本药物目录（2018年版）.pdf",
+        page_number=102,
+        chapter_title="",
+        block_type="text",
+    )
+
+    score = MultiGranularityRetriever._adjust_score_for_query(
+        "儿童发热可以同时吃布洛芬和对乙酰氨基酚吗？",
+        chunk,
+        0.9,
+    )
+
+    assert score < 0.9
+
+
+def test_retriever_boosts_fever_guideline_for_antipyretic_query():
+    chunk = RetrievedChunk(
+        content="When using paracetamol or ibuprofen in children with fever: do not give both agents simultaneously.",
+        granularity=512,
+        distance=0.1,
+        relevance_score=0.9,
+        authority_weight=0.9,
+        final_score=0.81,
+        source_file="NICE_NG143_Fever_in_under_5s.pdf",
+        page_number=28,
+        chapter_title="",
+        block_type="text",
+    )
+
+    score = MultiGranularityRetriever._adjust_score_for_query(
+        "儿童发热可以同时吃布洛芬和对乙酰氨基酚吗？",
+        chunk,
+        0.81,
+    )
+
+    assert score > 0.81
 
 
 def test_faithfulness_score_accepts_reasoning_alias():
