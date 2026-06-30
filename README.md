@@ -114,6 +114,16 @@ $env:PYTHONPATH='backend'
 python backend/rebuild_index.py
 ```
 
+Optional local embedding mode is available for offline or privacy-sensitive retrieval experiments:
+
+```powershell
+pip install -r backend/requirements-local-embedding.txt
+$env:EMBEDDING_PROVIDER='local'
+$env:EMBEDDING_MODEL='BAAI/bge-small-zh-v1.5'
+$env:CHROMA_PERSIST_DIR='backend/data/chroma_db_local'
+python backend/rebuild_index.py
+```
+
 Start the backend:
 
 ```powershell

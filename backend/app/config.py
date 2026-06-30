@@ -50,8 +50,8 @@ class Settings(BaseSettings):
     )
 
     # ── Embedding 模型 ──
-    EMBEDDING_PROVIDER: Literal["zhipu", "dashscope"] = Field(
-        default="zhipu", description="Embedding 供应商"
+    EMBEDDING_PROVIDER: Literal["zhipu", "dashscope", "local"] = Field(
+        default="zhipu", description="Embedding 供应商: zhipu / dashscope / local"
     )
     EMBEDDING_MODEL: str = Field(
         default="embedding-3",

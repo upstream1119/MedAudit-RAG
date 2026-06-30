@@ -112,6 +112,16 @@ $env:PYTHONPATH='backend'
 python backend/rebuild_index.py
 ```
 
+如果需要离线或隐私更敏感的检索实验，可以启用可选的本地 embedding 模式：
+
+```powershell
+pip install -r backend/requirements-local-embedding.txt
+$env:EMBEDDING_PROVIDER='local'
+$env:EMBEDDING_MODEL='BAAI/bge-small-zh-v1.5'
+$env:CHROMA_PERSIST_DIR='backend/data/chroma_db_local'
+python backend/rebuild_index.py
+```
+
 启动后端：
 
 ```powershell

@@ -28,7 +28,7 @@ from typing import Literal
 import chromadb
 
 from app.config import get_settings
-from app.knowledge.indexer import ZhipuEmbeddingFunction, _COLLECTION_NAMES
+from app.knowledge.indexer import create_embedding_function, _COLLECTION_NAMES
 
 logger = logging.getLogger(__name__)
 
@@ -126,6 +126,78 @@ _QUERY_EXPANSION_RULES = (
     ),
 )
 
+_LEXICAL_FALLBACK_RULES = (
+    {
+        "triggers": ("布洛芬", "对乙酰氨基酚", "退热", "发热"),
+        "source": "NICE_NG143_Fever_in_under_5s.pdf",
+        "terms": (
+            "paracetamol", "ibuprofen", "antipyretic", "fever",
+            "simultaneously", "alternating", "distress",
+        ),
+    },
+    {
+        "triggers": ("止咳", "化痰", "祛痰", "咳嗽", "有痰"),
+        "source": "NICE_NG120_Acute_cough_antimicrobial_prescribing.pdf",
+        "terms": (
+            "acute cough", "upper respiratory tract infection", "acute bronchitis",
+            "honey", "self-care", "mucolytic", "antitussive",
+        ),
+    },
+    {
+        "triggers": ("布地奈德", "雾化", "长期", "每天使用", "哮喘"),
+        "source": "NICE_NG245_Asthma_diagnosis_monitoring_management.pdf",
+        "terms": (
+            "asthma", "inhaled corticosteroid", "ICS", "budesonide",
+            "review", "monitoring", "dose",
+        ),
+    },
+    {
+        "triggers": ("喘息", "毛细支气管炎", "雾化药物", "抗生素同时"),
+        "source": "NICE_NG9_Bronchiolitis_in_children.pdf",
+        "terms": (
+            "bronchiolitis", "antibiotics", "salbutamol", "ipratropium bromide",
+            "systemic or inhaled corticosteroids", "do not use",
+        ),
+    },
+    {
+        "triggers": ("联合", "联用", "合并", "同时", "多种", "头孢", "抗生素"),
+        "source": "抗菌药物临床应用指导原则（2015年版）.pdf",
+        "terms": (
+            "联合用药", "抗菌药物联合", "2种", "3种", "不良反应",
+            "单一药物", "联合应用",
+        ),
+    },
+    {
+        "triggers": ("基本药物目录", "剂量依据", "治疗依据", "作为依据"),
+        "source": "国家基本药物目录（2018年版）.pdf",
+        "terms": (
+            "国家基本药物目录", "药品名称", "剂型", "规格", "阿奇霉素",
+        ),
+    },
+    {
+        "triggers": ("48-72", "48～72", "48 至 72", "48 小时", "没有好转", "换药", "疗效不佳", "无改善", "再次评估", "治疗无效"),
+        "source": "儿童社区获得性肺炎诊疗规范（2019年版）.pdf",
+        "terms": (
+            "48", "72", "再次评估", "症状无改善", "疗效", "抗生素覆盖",
+            "剂量", "耐药", "基础疾病", "并发症",
+        ),
+    },
+    {
+        "triggers": ("肝肾功能", "肝功能", "肾功能", "相互作用", "多种药物", "审方", "药师"),
+        "source": "抗菌药物临床应用指导原则（2015年版）.pdf",
+        "terms": (
+            "电子处方系统", "药师审方", "肝肾功能检查结果", "用药医嘱",
+            "临床指南", "药物相互作用", "肾功能不全",
+        ),
+    },
+)
+
+_SAFETY_PRINCIPLE_TERMS = (
+    "联合用药", "抗菌药物联合", "3种及3种以上", "不良反应",
+    "相互作用", "肝肾功能", "用药合理性", "药师", "审核",
+    "combination", "drug interaction", "renal function", "liver function",
+)
+
 
 # ────────────────────────────────────────────
 # 返回数据结构
@@ -177,11 +249,20 @@ class MultiGranularityRetriever:
             self._embed_fn = None
             return
 
+        embedding_mismatch = self._embedding_status_error()
+        if embedding_mismatch:
+            logger.warning("[Retriever] %s", embedding_mismatch)
+            self._index_status["ready"] = False
+            self._index_status["reason"] = embedding_mismatch
+            self._chroma = None
+            self._embed_fn = None
+            return
+
         # ChromaDB 只读客户端
         self._chroma = chromadb.PersistentClient(path=self._persist_dir)
 
         # Embedding 函数 (与 indexer 共享同一实现)
-        self._embed_fn = ZhipuEmbeddingFunction()
+        self._embed_fn = create_embedding_function()
 
         logger.info(f"[Retriever] 初始化完成: {self._persist_dir}")
 
@@ -257,6 +338,14 @@ class MultiGranularityRetriever:
             all_results.extend(chunks)
             logger.info(f"[Retriever] 粒度 {g}: 命中 {len(chunks)} 条")
 
+        all_results.extend(
+            self._collect_lexical_fallback_candidates(
+                query,
+                target_granularities,
+                include_tables=include_tables,
+            )
+        )
+
         # 权威度加权 + 排序
         for chunk in all_results:
             base_score = chunk.relevance_score * chunk.authority_weight
@@ -310,6 +399,26 @@ class MultiGranularityRetriever:
         status.setdefault("ready", False)
         return status
 
+    def _embedding_status_error(self) -> str:
+        """新索引必须使用与查询端一致的 embedding 配置；旧索引缺元数据时兼容放行。"""
+        index_provider = self._index_status.get("embedding_provider")
+        index_model = self._index_status.get("embedding_model")
+        if not index_provider or not index_model:
+            logger.warning(
+                "[Retriever] index_status.json 缺少 embedding 元数据，按旧索引兼容处理"
+            )
+            return ""
+
+        current_provider = self._settings.EMBEDDING_PROVIDER
+        current_model = self._settings.EMBEDDING_MODEL
+        if index_provider != current_provider or index_model != current_model:
+            return (
+                "索引 embedding 配置与当前查询配置不一致，拒绝检索以避免向量空间错配: "
+                f"index=({index_provider}, {index_model}), "
+                f"current=({current_provider}, {current_model})"
+            )
+        return ""
+
     def _parse_chroma_response(
         self, response: dict, granularity: int
     ) -> list[RetrievedChunk]:
@@ -344,6 +453,106 @@ class MultiGranularityRetriever:
             ))
 
         return results
+
+    def _collect_lexical_fallback_candidates(
+        self,
+        query: str,
+        granularities: list[int],
+        include_tables: bool = True,
+    ) -> list[RetrievedChunk]:
+        """补回少量 source-specific 候选，降低跨语言或原则性证据漏召回。"""
+        rules = [
+            rule for rule in _LEXICAL_FALLBACK_RULES
+            if any(term in query for term in rule["triggers"])
+        ]
+        if not rules or self._chroma is None:
+            return []
+
+        max_per_rule = max(2, min(4, getattr(self._settings, "RETRIEVAL_TOP_K", 3)))
+        candidates: list[RetrievedChunk] = []
+
+        for rule in rules:
+            per_rule: list[RetrievedChunk] = []
+            for granularity in granularities:
+                col_name = _COLLECTION_NAMES.get(granularity)
+                if col_name is None:
+                    continue
+                try:
+                    collection = self._chroma.get_collection(name=col_name)
+                    response = collection.get(
+                        where={"source_file": {"$eq": rule["source"]}},
+                        include=["documents", "metadatas"],
+                    )
+                except Exception as exc:
+                    logger.debug(
+                        "[Retriever] lexical fallback skipped for %s/%s: %s",
+                        rule["source"],
+                        col_name,
+                        exc,
+                    )
+                    continue
+
+                documents = response.get("documents", []) or []
+                metadatas = response.get("metadatas", []) or []
+                for doc, meta in zip(documents, metadatas):
+                    if not include_tables and meta.get("block_type") == "table":
+                        continue
+                    if self._is_noise_chunk(doc):
+                        continue
+
+                    lexical_score = min(
+                        1.0,
+                        self._lexical_score(doc, rule["terms"])
+                        + self._fallback_phrase_bonus(doc, rule),
+                    )
+                    if lexical_score <= 0:
+                        continue
+
+                    relevance = min(0.92, 0.52 + 0.40 * lexical_score)
+                    distance = (1.0 / relevance) - 1.0
+                    per_rule.append(RetrievedChunk(
+                        content=doc,
+                        granularity=granularity,
+                        distance=distance,
+                        relevance_score=relevance,
+                        authority_weight=self._get_authority_weight(meta.get("source_file", "")),
+                        final_score=0.0,
+                        source_file=meta.get("source_file", ""),
+                        page_number=meta.get("page_number", 0),
+                        chapter_title=meta.get("chapter_title", ""),
+                        block_type=meta.get("block_type", "text"),
+                    ))
+
+            per_rule.sort(key=lambda chunk: chunk.relevance_score, reverse=True)
+            candidates.extend(per_rule[:max_per_rule])
+
+        return candidates
+
+    @staticmethod
+    def _lexical_score(content: str, terms: tuple[str, ...]) -> float:
+        text = (content or "").lower()
+        unique_terms = tuple(dict.fromkeys(term.lower() for term in terms if term))
+        if not unique_terms:
+            return 0.0
+
+        hits = sum(1 for term in unique_terms if term in text)
+        return hits / len(unique_terms)
+
+    @staticmethod
+    def _fallback_phrase_bonus(content: str, rule: dict) -> float:
+        source = rule.get("source", "")
+        if "抗菌药物临床应用指导原则" not in source:
+            return 0.0
+
+        bonus = 0.0
+        if "联合用药通常采用" in content:
+            bonus += 0.35
+        if (
+            ("3种及3种以上" in content or "3 种及 3 种以上" in content)
+            and "不良反应亦可能增多" in content
+        ):
+            bonus += 0.25
+        return bonus
 
     @staticmethod
     def _is_noise_chunk(content: str) -> bool:
@@ -406,6 +615,22 @@ class MultiGranularityRetriever:
             content = getattr(chunk, "content", "") or ""
             if all(any(term in content for term in group) for group in required_groups):
                 filtered.append(chunk)
+        if filtered and MultiGranularityRetriever._is_broad_review_query(query):
+            principle_chunks = [
+                chunk for chunk in chunks
+                if MultiGranularityRetriever._has_safety_principle_signal(
+                    getattr(chunk, "content", "") or ""
+                )
+            ]
+            merged = []
+            seen = set()
+            for chunk in [*filtered, *principle_chunks]:
+                marker = id(chunk)
+                if marker in seen:
+                    continue
+                seen.add(marker)
+                merged.append(chunk)
+            return merged
         if not filtered and MultiGranularityRetriever._is_broad_review_query(query):
             return chunks
         return filtered
@@ -428,6 +653,12 @@ class MultiGranularityRetriever:
             *_AUDIT_FIELD_QUERY_TERMS,
             *_SOURCE_BOUNDARY_QUERY_TERMS,
         ))
+
+    @staticmethod
+    def _has_safety_principle_signal(content: str) -> bool:
+        text = content or ""
+        text_lower = text.lower()
+        return any(term in text or term.lower() in text_lower for term in _SAFETY_PRINCIPLE_TERMS)
 
     @staticmethod
     def _adjust_score_for_query(query: str, chunk: RetrievedChunk, base_score: float) -> float:
@@ -466,10 +697,21 @@ class MultiGranularityRetriever:
         if any(term in query for term in ("肝肾功能", "肝功能", "肾功能", "相互作用", "审方")):
             if any(term in source_text for term in ("抗菌药物临床应用指导原则", "肝肾功能", "药师审方", "renal function")):
                 score *= 1.45
+            if any(term in content for term in ("电子处方系统", "药师审方", "肝肾功能检查结果", "用药医嘱")):
+                score *= 1.55
+
+        if any(term in query for term in ("48-72", "48～72", "48 小时", "没有好转", "无改善", "再次评估")):
+            if "儿童社区获得性肺炎诊疗规范" in source and "再次评估" in content and "48" in content and "72" in content:
+                score *= 1.65
 
         if is_combination_query:
-            if any(term in content for term in ("联合用药", "不良反应", "抗菌药物联合", "combination")):
-                score *= 1.35
+            if (
+                "联合用药通常采用" in content
+                or ("联合用药" in content and ("3种" in content or "不良反应亦可能增多" in content))
+            ):
+                score *= 1.75
+            elif any(term in content for term in ("联合用药", "抗菌药物联合", "combination")):
+                score *= 1.25
 
         return score
 

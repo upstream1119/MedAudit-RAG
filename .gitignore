@@ -31,6 +31,7 @@ env/
 # Data / generated indexes
 data/chroma_db/
 backend/data/chroma_db/
+backend/data/chroma_db*/
 data/chroma_db_test/
 data/guidelines/**/*.pdf
 *.pdf

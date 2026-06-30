@@ -1,0 +1,5 @@
+# Optional local embedding dependencies for offline/private experiments.
+# Install only when you need EMBEDDING_PROVIDER=local.
+
+sentence-transformers>=3.0.0
+torch>=2.1.0

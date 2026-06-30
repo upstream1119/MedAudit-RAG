@@ -75,6 +75,8 @@ def _build_index_status(
     pdfs: list[Path],
     per_doc_summary: dict[str, dict[str, object]],
     source_inspections: dict[str, dict[str, object]],
+    embedding_provider: str | None = None,
+    embedding_model: str | None = None,
 ) -> dict[str, object]:
     expected_sources = [pdf.name for pdf in pdfs]
     indexed_sources = [
@@ -96,6 +98,8 @@ def _build_index_status(
 
     return {
         "ready": not incomplete_sources,
+        "embedding_provider": embedding_provider,
+        "embedding_model": embedding_model,
         "expected_sources": expected_sources,
         "indexed_sources": indexed_sources,
         "missing_sources": missing_sources,
@@ -117,7 +121,12 @@ def main() -> None:
     parser = DualTrackMedicalParser()
     chunker = SemanticChunker()
 
-    chroma_dir = (root / "backend" / "data" / "chroma_db").resolve()
+    configured_chroma_dir = Path(settings.CHROMA_PERSIST_DIR)
+    chroma_dir = (
+        configured_chroma_dir
+        if configured_chroma_dir.is_absolute()
+        else root / configured_chroma_dir
+    ).resolve()
     pdfs = _guideline_paths(root)
 
     logger.info("准备重建索引，目标目录: %s", chroma_dir)
@@ -168,7 +177,13 @@ def main() -> None:
         total_chunk_counter.update({g: len(chunks) for g, chunks in chunks_by_granularity.items()})
         logger.info("完成处理: %s", pdf_path.name)
 
-    index_status = _build_index_status(pdfs, per_doc_summary, source_inspections)
+    index_status = _build_index_status(
+        pdfs,
+        per_doc_summary,
+        source_inspections,
+        embedding_provider=settings.EMBEDDING_PROVIDER,
+        embedding_model=settings.EMBEDDING_MODEL,
+    )
 
     summary = {
         "pdf_count": len(pdfs),

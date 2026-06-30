@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -8,7 +9,9 @@ from app.agents.graph import route_after_router
 from app.agents.nodes import retriever_node as retriever_node_module
 from app.api import routes
 from app.config import Settings
+from app.knowledge import indexer as indexer_module
 from app.knowledge import parser as parser_module
+from app.knowledge import retriever as knowledge_retriever_module
 from app.knowledge.indexer import ZhipuEmbeddingFunction
 from app.knowledge.parser import DualTrackMedicalParser
 from app.knowledge.retriever import MultiGranularityRetriever, RetrievedChunk
@@ -386,6 +389,230 @@ def test_retriever_boosts_fever_guideline_for_antipyretic_query():
     assert score > 0.81
 
 
+def test_retriever_collects_source_specific_lexical_fallback(monkeypatch):
+    class FakeCollection:
+        def get(self, where=None, include=None):
+            assert where == {"source_file": {"$eq": "NICE_NG143_Fever_in_under_5s.pdf"}}
+            assert include == ["documents", "metadatas"]
+            return {
+                "documents": [
+                    "When using paracetamol or ibuprofen in children with fever, do not give both agents simultaneously.",
+                    "This unrelated paragraph describes general assessment.",
+                ],
+                "metadatas": [
+                    {
+                        "source_file": "NICE_NG143_Fever_in_under_5s.pdf",
+                        "page_number": 28,
+                        "chapter_title": "Antipyretic interventions",
+                        "block_type": "text",
+                    },
+                    {
+                        "source_file": "NICE_NG143_Fever_in_under_5s.pdf",
+                        "page_number": 2,
+                        "chapter_title": "Introduction",
+                        "block_type": "text",
+                    },
+                ],
+            }
+
+    class FakeChroma:
+        def get_collection(self, name):
+            return FakeCollection()
+
+    retriever = MultiGranularityRetriever.__new__(MultiGranularityRetriever)
+    retriever._settings = SimpleNamespace(
+        AUTHORITY_WEIGHTS={"clinical_guideline": 0.9, "default": 0.5},
+        RETRIEVAL_TOP_K=3,
+    )
+    retriever._chroma = FakeChroma()
+
+    chunks = retriever._collect_lexical_fallback_candidates(
+        "儿童发热可以同时吃布洛芬和对乙酰氨基酚吗？",
+        [512],
+    )
+
+    assert len(chunks) == 1
+    assert chunks[0].source_file == "NICE_NG143_Fever_in_under_5s.pdf"
+    assert chunks[0].page_number == 28
+    assert chunks[0].relevance_score > 0.5
+
+
+def test_required_term_filter_keeps_principle_chunks_for_broad_review_query():
+    drug_specific = SimpleNamespace(content="阿奇霉素可用于肺炎支原体肺炎治疗。")
+    principle = SimpleNamespace(
+        content="联合用药通常采用2种药物联合，3种及3种以上药物联合仅适用于个别情况；联合用药后药物不良反应亦可能增多。"
+    )
+
+    filtered = MultiGranularityRetriever._apply_required_term_filter(
+        "儿童肺炎能否同时使用阿奇霉素、头孢、激素和雾化？",
+        [drug_specific, principle],
+    )
+
+    assert drug_specific in filtered
+    assert principle in filtered
+
+
+def test_retriever_collects_cap_nonresponse_fallback_for_48_hour_query():
+    class FakeCollection:
+        def get(self, where=None, include=None):
+            assert where == {"source_file": {"$eq": "儿童社区获得性肺炎诊疗规范（2019年版）.pdf"}}
+            return {
+                "documents": [
+                    "所有患者经48～72 小时治疗症状无改善，应再次进行临床或/和实验室评估，并考虑抗生素覆盖、剂量、耐药等问题。",
+                    "肺炎支原体肺炎可选用大环内酯类抗菌药物。",
+                ],
+                "metadatas": [
+                    {
+                        "source_file": "儿童社区获得性肺炎诊疗规范（2019年版）.pdf",
+                        "page_number": 26,
+                        "chapter_title": "",
+                        "block_type": "text",
+                    },
+                    {
+                        "source_file": "儿童社区获得性肺炎诊疗规范（2019年版）.pdf",
+                        "page_number": 15,
+                        "chapter_title": "",
+                        "block_type": "text",
+                    },
+                ],
+            }
+
+    class FakeChroma:
+        def get_collection(self, name):
+            return FakeCollection()
+
+    retriever = MultiGranularityRetriever.__new__(MultiGranularityRetriever)
+    retriever._settings = SimpleNamespace(
+        AUTHORITY_WEIGHTS={"clinical_guideline": 0.9, "default": 0.5},
+        RETRIEVAL_TOP_K=3,
+    )
+    retriever._chroma = FakeChroma()
+
+    chunks = retriever._collect_lexical_fallback_candidates(
+        "儿童肺炎使用抗生素 48 小时没有好转，是不是一定要换药？",
+        [512],
+    )
+
+    assert len(chunks) == 1
+    assert chunks[0].page_number == 26
+
+
+def test_retriever_collects_bronchiolitis_fallback_for_wheeze_nebulization_query():
+    class FakeCollection:
+        def get(self, where=None, include=None):
+            assert where == {"source_file": {"$eq": "NICE_NG9_Bronchiolitis_in_children.pdf"}}
+            return {
+                "documents": [
+                    "Do not use antibiotics, salbutamol, ipratropium bromide, systemic or inhaled corticosteroids for bronchiolitis.",
+                ],
+                "metadatas": [
+                    {
+                        "source_file": "NICE_NG9_Bronchiolitis_in_children.pdf",
+                        "page_number": 11,
+                        "chapter_title": "",
+                        "block_type": "text",
+                    },
+                ],
+            }
+
+    class FakeChroma:
+        def get_collection(self, name):
+            return FakeCollection()
+
+    retriever = MultiGranularityRetriever.__new__(MultiGranularityRetriever)
+    retriever._settings = SimpleNamespace(
+        AUTHORITY_WEIGHTS={"clinical_guideline": 0.9, "default": 0.5},
+        RETRIEVAL_TOP_K=3,
+    )
+    retriever._chroma = FakeChroma()
+
+    chunks = retriever._collect_lexical_fallback_candidates(
+        "儿童肺炎合并喘息时，雾化药物能否和抗生素同时用？",
+        [512],
+    )
+
+    assert len(chunks) == 1
+    assert chunks[0].source_file == "NICE_NG9_Bronchiolitis_in_children.pdf"
+
+
+def test_retriever_boosts_specific_combination_principle_over_general_adverse_effects():
+    principle = RetrievedChunk(
+        content="联合用药通常采用2种药物联合，3种及3种以上药物联合仅适用于个别情况；联合用药后药物不良反应亦可能增多。",
+        granularity=512,
+        distance=0.4,
+        relevance_score=0.7,
+        authority_weight=0.9,
+        final_score=0.63,
+        source_file="抗菌药物临床应用指导原则（2015年版）.pdf",
+        page_number=7,
+        chapter_title="",
+        block_type="text",
+    )
+    general_adverse_effect = RetrievedChunk(
+        content="本类药物可能出现凝血功能障碍和不良反应，治疗期间应注意观察。",
+        granularity=512,
+        distance=0.4,
+        relevance_score=0.7,
+        authority_weight=0.9,
+        final_score=0.63,
+        source_file="抗菌药物临床应用指导原则（2015年版）.pdf",
+        page_number=31,
+        chapter_title="",
+        block_type="text",
+    )
+
+    query = "儿童肺炎能否同时使用阿奇霉素、头孢、激素和雾化？"
+
+    principle_score = MultiGranularityRetriever._adjust_score_for_query(query, principle, 0.63)
+    general_score = MultiGranularityRetriever._adjust_score_for_query(query, general_adverse_effect, 0.63)
+
+    assert principle_score > general_score
+
+
+def test_lexical_fallback_prefers_combination_principle_page():
+    class FakeCollection:
+        def get(self, where=None, include=None):
+            assert where == {"source_file": {"$eq": "抗菌药物临床应用指导原则（2015年版）.pdf"}}
+            return {
+                "documents": [
+                    "抗菌药物联合应用时应注意2种、3种药物相关不良反应和单一药物治疗情况。",
+                    "联合用药通常采用2种药物联合，3种及3种以上药物联合仅适用于个别情况；联合用药后药物不良反应亦可能增多。",
+                ],
+                "metadatas": [
+                    {
+                        "source_file": "抗菌药物临床应用指导原则（2015年版）.pdf",
+                        "page_number": 31,
+                        "chapter_title": "",
+                        "block_type": "text",
+                    },
+                    {
+                        "source_file": "抗菌药物临床应用指导原则（2015年版）.pdf",
+                        "page_number": 7,
+                        "chapter_title": "",
+                        "block_type": "text",
+                    },
+                ],
+            }
+
+    class FakeChroma:
+        def get_collection(self, name):
+            return FakeCollection()
+
+    retriever = MultiGranularityRetriever.__new__(MultiGranularityRetriever)
+    retriever._settings = SimpleNamespace(
+        AUTHORITY_WEIGHTS={"clinical_guideline": 0.9, "default": 0.5},
+        RETRIEVAL_TOP_K=3,
+    )
+    retriever._chroma = FakeChroma()
+
+    chunks = retriever._collect_lexical_fallback_candidates(
+        "儿童肺炎能否同时使用阿奇霉素、头孢、激素和雾化？",
+        [512],
+    )
+
+    assert chunks[0].page_number == 7
+
+
 def test_faithfulness_score_accepts_reasoning_alias():
     score = FaithfulnessScore.model_validate(
         {
@@ -544,6 +771,20 @@ def test_settings_accepts_release_debug_values():
     assert settings.DEBUG is False
 
 
+def test_settings_accepts_local_embedding_provider():
+    settings = Settings.model_validate(
+        {
+            "DEBUG": "release",
+            "LLM_PROVIDER": "zhipu",
+            "EMBEDDING_PROVIDER": "local",
+            "EMBEDDING_MODEL": "BAAI/bge-small-zh-v1.5",
+        }
+    )
+
+    assert settings.EMBEDDING_PROVIDER == "local"
+    assert settings.EMBEDDING_MODEL == "BAAI/bge-small-zh-v1.5"
+
+
 def test_settings_env_file_points_to_backend_env():
     env_file = Path(Settings.model_config["env_file"])
     assert env_file.name == ".env"
@@ -561,3 +802,76 @@ def test_settings_default_chroma_dir_points_to_backend_data():
     chroma_dir = Path(settings.CHROMA_PERSIST_DIR)
 
     assert chroma_dir.parts[-3:] == ("backend", "data", "chroma_db")
+
+
+def test_create_embedding_function_uses_local_sentence_transformer(monkeypatch):
+    class FakeSentenceTransformer:
+        def __init__(self, model_name):
+            self.model_name = model_name
+
+        def encode(self, texts, normalize_embeddings=True, show_progress_bar=False):
+            assert texts == ["儿童用药"]
+            assert normalize_embeddings is True
+            assert show_progress_bar is False
+            return [[0.1, 0.2, 0.3]]
+
+    monkeypatch.setitem(
+        sys.modules,
+        "sentence_transformers",
+        SimpleNamespace(SentenceTransformer=FakeSentenceTransformer),
+    )
+    monkeypatch.setattr(
+        indexer_module,
+        "get_settings",
+        lambda: SimpleNamespace(
+            EMBEDDING_PROVIDER="local",
+            EMBEDDING_MODEL="fake-local-model",
+        ),
+    )
+
+    embed_fn = indexer_module.create_embedding_function()
+
+    assert embed_fn(["儿童用药"]) == [[0.1, 0.2, 0.3]]
+
+
+def test_index_status_records_embedding_metadata():
+    status = _build_index_status(
+        pdfs=[Path("source.pdf")],
+        per_doc_summary={"source.pdf": {"blocks_total": 1}},
+        source_inspections={"source.pdf": {"scan_heavy": False}},
+        embedding_provider="local",
+        embedding_model="BAAI/bge-small-zh-v1.5",
+    )
+
+    assert status["ready"] is True
+    assert status["embedding_provider"] == "local"
+    assert status["embedding_model"] == "BAAI/bge-small-zh-v1.5"
+
+
+def test_retriever_rejects_embedding_config_mismatch(monkeypatch, tmp_path):
+    status_path = tmp_path / "index_status.json"
+    status_path.write_text(
+        (
+            '{"ready": true, "embedding_provider": "dashscope", '
+            '"embedding_model": "text-embedding-v4"}'
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        knowledge_retriever_module,
+        "get_settings",
+        lambda: SimpleNamespace(
+            CHROMA_PERSIST_DIR=str(tmp_path),
+            RETRIEVAL_TOP_K=3,
+            EMBEDDING_PROVIDER="local",
+            EMBEDDING_MODEL="BAAI/bge-small-zh-v1.5",
+        ),
+    )
+
+    retriever = knowledge_retriever_module.MultiGranularityRetriever(
+        persist_dir=str(tmp_path)
+    )
+
+    assert retriever.retrieve("儿童用药") == []
+    assert retriever._index_status["ready"] is False
+    assert "向量空间错配" in retriever._index_status["reason"]

@@ -31,7 +31,7 @@ _COLLECTION_NAMES = {
 
 class ZhipuEmbeddingFunction:
     """
-    智谱 Embedding 封装, 实现 ChromaDB 的 EmbeddingFunction 协议
+    OpenAI-compatible 远程 Embedding 封装, 实现 ChromaDB 的 EmbeddingFunction 协议
 
     ChromaDB 要求实现 __call__(self, input: Documents) -> Embeddings
     """
@@ -76,6 +76,49 @@ class ZhipuEmbeddingFunction:
         return embeddings
 
 
+class LocalEmbeddingDependencyError(RuntimeError):
+    """本地 embedding 可选依赖缺失时抛出明确错误。"""
+
+
+class LocalSentenceTransformerEmbeddingFunction:
+    """基于 sentence-transformers 的本地离线 Embedding 封装。"""
+
+    def __init__(self):
+        settings = get_settings()
+        self._model_name = settings.EMBEDDING_MODEL
+        try:
+            from sentence_transformers import SentenceTransformer
+        except ImportError as exc:
+            raise LocalEmbeddingDependencyError(
+                "EMBEDDING_PROVIDER=local 需要安装可选依赖。"
+                "请先安装 backend/requirements-local-embedding.txt，"
+                "并确认本地模型已下载或可访问。"
+            ) from exc
+
+        self._model = SentenceTransformer(self._model_name)
+
+    def __call__(self, input: list[str]) -> list[list[float]]:
+        """批量生成本地 Embedding 向量。"""
+        if not input:
+            return []
+        embeddings = self._model.encode(
+            input,
+            normalize_embeddings=True,
+            show_progress_bar=False,
+        )
+        if hasattr(embeddings, "tolist"):
+            return embeddings.tolist()
+        return [list(row) for row in embeddings]
+
+
+def create_embedding_function():
+    """根据配置创建索引/检索共用的 Embedding 函数。"""
+    settings = get_settings()
+    if settings.EMBEDDING_PROVIDER == "local":
+        return LocalSentenceTransformerEmbeddingFunction()
+    return ZhipuEmbeddingFunction()
+
+
 class VectorIndexer:
     """
     三粒度向量索引管理器
@@ -94,7 +137,7 @@ class VectorIndexer:
         self._chroma = chromadb.PersistentClient(path=self._persist_dir)
 
         # 初始化 Embedding 函数
-        self._embed_fn = ZhipuEmbeddingFunction()
+        self._embed_fn = create_embedding_function()
 
         # 记录已入库的 (文件哈希, 粒度) 组合 (防重复灌入)
         self._indexed_hashes: set[str] = set()
