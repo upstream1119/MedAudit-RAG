@@ -1,0 +1,25 @@
+{
+  "run_mode": "pilot_model_call",
+  "source_run_dir": "latest",
+  "source_run_prefix": "phase5_dry_run_",
+  "output_root": "experiments/baseline_round1/runs",
+  "cache_dir": "experiments/baseline_round1/.cache/model_outputs",
+  "execute_model_calls": false,
+  "load_env_files": true,
+  "api_key_env": "DASHSCOPE_API_KEY",
+  "api_base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+  "request_timeout_seconds": 120,
+  "max_retries": 2,
+  "temperature": 0.0,
+  "max_output_tokens": 300,
+  "models": [
+    {
+      "model_provider": "dashscope",
+      "model_name": "qwen3.6-flash-2026-04-16",
+      "role": "generator",
+      "price_input_per_1m_cny": 0.0,
+      "price_output_per_1m_cny": 0.0,
+      "cost_note": "Use free quota first; update prices if paid billing is enabled."
+    }
+  ]
+}

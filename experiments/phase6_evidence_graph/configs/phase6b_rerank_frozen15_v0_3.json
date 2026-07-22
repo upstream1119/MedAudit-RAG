@@ -1,0 +1,51 @@
+{
+  "config_version": "phase6b-rerank-frozen15-v0.3",
+  "method_id": "runtime_constraint_graph_reranking",
+  "method_version": "phase6b-runtime-constraint-v0.4",
+  "input_run_dir": "revision/phase6/graph_runs/phase6a_batch_v0_1_20260719_002943",
+  "output_root": "revision/phase6/graph_runs",
+  "run_id_prefix": "phase6b_rerank_frozen15_v0_3",
+  "sample_ids": [
+    "PMSQA_DEV_001",
+    "PMSQA_DEV_002",
+    "PMSQA_DEV_003",
+    "PMSQA_DEV_005",
+    "PMSQA_DEV_006",
+    "PMSQA_DEV_007",
+    "PMSQA_DEV_011",
+    "PMSQA_DEV_014",
+    "PMSQA_DEV_019",
+    "PMSQA_DEV_024",
+    "PMSQA_DEV_035",
+    "PMSQA_DEV_039",
+    "PMSQA_DEV_042",
+    "PMSQA_DEV_043",
+    "PMSQA_DEV_047"
+  ],
+  "top_k": 4,
+  "score_weights": {
+    "relevance": 0.65,
+    "authority": 0.2,
+    "constraint_type_coverage": 0.15
+  },
+  "constraint_type_weights": {
+    "dose": 1.0,
+    "frequency": 1.0,
+    "route": 1.0,
+    "monitoring_window": 1.0,
+    "monitoring_trigger": 1.0,
+    "monitoring_action": 1.0,
+    "monitoring_target": 1.0,
+    "combination_antimicrobial": 1.0,
+    "combination_antipyretic": 1.0,
+    "combination_cough_medicine": 1.0,
+    "contraindication_check": 1.0,
+    "contraindication_action": 1.0,
+    "age_group": 1.0,
+    "patient_weight": 1.0,
+    "population_context": 1.0,
+    "interaction_check": 1.0,
+    "evidence_scope": 1.0,
+    "dose_adjustment": 1.0
+  }
+}

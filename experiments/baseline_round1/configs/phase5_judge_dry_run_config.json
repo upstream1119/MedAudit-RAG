@@ -1,0 +1,24 @@
+{
+  "run_mode": "judge_dry_run_no_api_call",
+  "source_pilot_run_dir": "experiments/baseline_round1/runs/phase5_pilot_20260703_191632",
+  "retrieval_outputs_path": "revision/benchmark/dev50/smoke_runs/retrieval_smoke_v0_3_kb22_retrieval-smoke-v4_20260630_112017/raw_retrieval_outputs.jsonl",
+  "output_root": "experiments/baseline_round1/runs",
+  "judge_prompt_path": "experiments/baseline_round1/prompts/judge_prompt_v0_2.md",
+  "judge_prompt_version": "phase5-judge-v0.2-blind",
+  "dataset_version": "dev50-v1.0",
+  "kb_version": "kb-medium-v1-local-bge",
+  "max_evidence_snippets": 3,
+  "max_evidence_chars_per_snippet": 320,
+  "max_answer_chars": 900,
+  "max_output_tokens": 350,
+  "models": [
+    {
+      "model_provider": "dashscope",
+      "model_name": "qwen3.6-flash-2026-04-16",
+      "role": "judge",
+      "price_input_per_1m_cny": 0.0,
+      "price_output_per_1m_cny": 0.0,
+      "cost_note": "Dry run only. Use free quota first and update prices if paid billing is enabled."
+    }
+  ]
+}

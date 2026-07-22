@@ -1,0 +1,26 @@
+{
+  "config_version": "phase6b-rerank-smoke3-v0.1",
+  "method_id": "runtime_constraint_graph_reranking",
+  "method_version": "phase6b-runtime-constraint-v0.1",
+  "input_run_dir": "revision/phase6/graph_runs/phase6a_batch_v0_1_20260719_002943",
+  "output_root": "revision/phase6/graph_runs",
+  "sample_ids": [
+    "PMSQA_DEV_001",
+    "PMSQA_DEV_002",
+    "PMSQA_DEV_003"
+  ],
+  "top_k": 4,
+  "score_weights": {
+    "relevance": 0.65,
+    "authority": 0.2,
+    "constraint_type_coverage": 0.15
+  },
+  "constraint_type_weights": {
+    "dose": 1.0,
+    "frequency": 1.0,
+    "route": 1.0,
+    "monitoring_window": 1.0,
+    "monitoring_trigger": 1.0,
+    "monitoring_action": 1.0
+  }
+}

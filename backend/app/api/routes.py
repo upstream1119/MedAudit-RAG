@@ -4,7 +4,6 @@ Medaudit-RAG API 路由
 
 import time
 import logging
-import re
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 from app.config import get_settings
@@ -17,36 +16,13 @@ from app.models.schemas import (
     IntentType,
 )
 from app.services.llm_client import get_llm_client
+from app.services.safety_boundary import is_direct_prescription_request
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-PRESCRIPTION_ACTION_TERMS = (
-    "开处方",
-    "帮我开处方",
-    "开药",
-    "帮我开药",
-    "处方",
-    "用药方案",
-)
-
-PATIENT_CONTEXT_TERMS = (
-    "这个孩子",
-    "患儿",
-    "宝宝",
-    "婴儿",
-    "儿童",
-    "发热",
-    "咳嗽",
-)
-
-
-def _is_direct_prescription_request(query: str) -> bool:
-    """Block patient-specific prescription generation before RAG."""
-    compact_query = re.sub(r"\s+", "", query)
-    has_prescription_action = any(term in compact_query for term in PRESCRIPTION_ACTION_TERMS)
-    has_patient_context = any(term in compact_query for term in PATIENT_CONTEXT_TERMS)
-    return has_prescription_action and has_patient_context
+# Backward-compatible alias retained for existing callers and regression tests.
+_is_direct_prescription_request = is_direct_prescription_request
 
 
 def _blocked_prescription_answer() -> str:

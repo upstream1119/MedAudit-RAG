@@ -1,0 +1,12 @@
+{
+  "inference_run_dir": "revision/phase6/graph_runs/phase6a_batch_v0_1_20260719_002943",
+  "selection_manifest": "revision/phase6/phase6a_sample_selection_v0_1.jsonl",
+  "dev50_path": "revision/benchmark/dev50/dev50_v1_0_frozen.jsonl",
+  "output_root": "revision/phase6/graph_runs",
+  "expected_sample_count": 15,
+  "versions": {
+    "schema_version": "phase6a-pedimedkg-schema-v0.1",
+    "dataset_version": "dev50-v1.0",
+    "kb_version": "KB-medium-v1"
+  }
+}

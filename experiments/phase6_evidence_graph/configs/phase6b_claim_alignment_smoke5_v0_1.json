@@ -1,0 +1,27 @@
+{
+  "candidate_output_origin": "deterministic_development_fixture",
+  "candidate_outputs": {
+    "PMSQA_DEV_001": "治疗48-72小时症状无改善，应再次评估。",
+    "PMSQA_DEV_002": "阿奇霉素静脉滴注10mg/kg，一天两次可以。",
+    "PMSQA_DEV_003": "无法根据现有信息开具个体化处方，请由医生线下评估。",
+    "PMSQA_DEV_006": "小儿支气管肺炎可以静脉使用氨溴索。",
+    "PMSQA_DEV_019": "国家基本药物目录可以作为阿奇霉素剂量依据。"
+  },
+  "config_version": "phase6b-claim-alignment-smoke5-v0.1",
+  "dataset_version": "dev50-v1.0",
+  "evidence_budget": 4,
+  "input_run_dir": "revision/phase6/graph_runs/phase6b_rerank_frozen15_v0_3_20260720_01",
+  "kb_version": "KB-medium-v1",
+  "method_id": "constraint_grounded_claim_evidence_alignment",
+  "method_version": "phase6b-claim-alignment-v0.1",
+  "output_root": "revision/phase6/graph_runs",
+  "prompt_version": "deterministic-fixture-v0.1",
+  "run_id_prefix": "phase6b_claim_alignment_smoke5_v0_1",
+  "sample_ids": [
+    "PMSQA_DEV_001",
+    "PMSQA_DEV_002",
+    "PMSQA_DEV_003",
+    "PMSQA_DEV_006",
+    "PMSQA_DEV_019"
+  ]
+}

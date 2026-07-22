@@ -8,6 +8,7 @@ build/
 *.egg
 .pytest_cache/
 backend/.pytest_cache/
+.pytest_tmp_*/
 .mypy_cache/
 .ruff_cache/
 .coverage
@@ -48,6 +49,9 @@ frontend/.vite/
 # Local generated artifacts
 outputs/
 soft_copyright/
+soft_copyright_correction/
+experiments/**/runs/
+experiments/**/.cache/
 
 # Personal / AI collaboration notes (local only)
 AGENTS.md

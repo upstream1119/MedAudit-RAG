@@ -1,0 +1,15 @@
+{
+  "selection_manifest": "revision/phase6/phase6a_sample_selection_v0_1.jsonl",
+  "dev50_path": "revision/benchmark/dev50/dev50_v1_0_frozen.jsonl",
+  "retrieval_outputs_path": "revision/benchmark/dev50/smoke_runs/retrieval_smoke_v0_3_kb22_retrieval-smoke-v4_20260630_112017/raw_retrieval_outputs.jsonl",
+  "source_manifest_path": "data/guidelines/source_manifest.json",
+  "index_status_path": "backend/data/chroma_db/index_status.json",
+  "output_root": "revision/phase6/graph_runs",
+  "expected_sample_count": 15,
+  "router_input_mode": "retrieval_query_passthrough",
+  "versions": {
+    "schema_version": "phase6a-pedimedkg-schema-v0.1",
+    "dataset_version": "dev50-v1.0",
+    "kb_version": "KB-medium-v1"
+  }
+}

@@ -6,7 +6,7 @@ Rule-aware evidence auditing RAG system for safer pediatric medication question 
 
 MedAudit-RAG is a research prototype for auditing whether pediatric medication answers are supported by traceable evidence from guidelines, consensus documents, drug labels, catalogs, and other admitted authoritative sources. It is not a clinical diagnosis system, prescription generator, or replacement for licensed clinicians.
 
-The current repository implements a vector RAG and TrustScore baseline. Graph-enhanced evidence auditing is a research direction under development, not a completed claim.
+The current repository contains a vector RAG + TrustScore baseline and a development-stage graph-enhanced evidence-auditing prototype. Its empirical effects have not yet been established and require formal evaluation on a frozen benchmark.
 
 ## Core Capabilities
 
