@@ -20,6 +20,7 @@ def _config() -> dict:
         "dataset_version": "dev50-v1.0",
         "kb_version": "KB-medium-v1",
         "prompt_version": "phase6b-generator-v0.1",
+        "inference_profile": "qwen-test-nonthinking-v0.1",
         "run_mode": "dry_run_no_api_call",
         "execute_model_calls": False,
         "dataset_path": "revision/benchmark/dev50/dev50_v1_0_frozen.jsonl",
@@ -106,8 +107,29 @@ def test_call_plan_records_versions_cache_and_token_estimates(tmp_path):
         assert row["dataset_version"] == "dev50-v1.0"
         assert row["kb_version"] == "KB-medium-v1"
         assert row["prompt_version"] == "phase6b-generator-v0.1"
+        assert row["inference_profile"] == "qwen-test-nonthinking-v0.1"
         assert len(row["cache_key"]) == 64
         assert row["estimated_input_tokens"] > 0
         assert row["estimated_output_tokens"] == 300
         assert row["should_call_model"] is False
         assert row["skip_reason"] == "dry_run_no_api_call"
+
+
+def test_inference_profile_is_part_of_cache_identity(tmp_path):
+    first_config = _config()
+    second_config = _config()
+    second_config["inference_profile"] = "qwen-test-thinking-v0.1"
+
+    first_dir = tmp_path / "first"
+    second_dir = tmp_path / "second"
+    run_builder(first_config, output_dir=first_dir)
+    run_builder(second_config, output_dir=second_dir)
+
+    first_rows = _load_jsonl(first_dir / "prompts.jsonl")
+    second_rows = _load_jsonl(second_dir / "prompts.jsonl")
+    assert [row["cache_key"] for row in first_rows] != [
+        row["cache_key"] for row in second_rows
+    ]
+    assert {row["inference_profile"] for row in first_rows} == {
+        "qwen-test-nonthinking-v0.1"
+    }

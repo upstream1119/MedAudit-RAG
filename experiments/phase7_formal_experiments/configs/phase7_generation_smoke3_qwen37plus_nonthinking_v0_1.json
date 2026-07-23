@@ -1,0 +1,32 @@
+{
+  "config_version": "phase7-generation-smoke3-qwen37plus-nonthinking-v0.1",
+  "run_mode": "phase7_development_smoke",
+  "source_run_dir": "revision/phase7/source_runs/phase7_source_qwen37plus_nonthinking_smoke3_v0_1",
+  "output_root": "experiments/phase7_formal_experiments/runs",
+  "cache_dir": "experiments/phase7_formal_experiments/.cache/model_outputs",
+  "run_id_prefix": "phase7_generation_qwen37plus_nonthinking_smoke3_v0_1",
+  "execute_model_calls": false,
+  "load_env_files": true,
+  "api_key_env": "DASHSCOPE_API_KEY",
+  "api_base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+  "request_timeout_seconds": 120,
+  "max_retries": 2,
+  "temperature": 0.0,
+  "max_output_tokens": 300,
+  "request_body_extra": {
+    "enable_thinking": false
+  },
+  "max_planned_calls": 6,
+  "max_estimated_input_tokens": 4500,
+  "max_estimated_output_tokens": 1800,
+  "models": [
+    {
+      "model_provider": "dashscope",
+      "model_name": "qwen3.7-plus",
+      "role": "generator",
+      "price_input_per_1m_cny": 0.0,
+      "price_output_per_1m_cny": 0.0,
+      "cost_note": "Free-tier development smoke; enable_thinking=false."
+    }
+  ]
+}

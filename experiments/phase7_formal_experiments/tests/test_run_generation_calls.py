@@ -1,6 +1,7 @@
 import importlib.util
 import json
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -209,3 +210,49 @@ def test_retry_failed_selects_only_failed_cache_keys(tmp_path):
 
     assert summary["selected_calls"] == 1
     assert summary["status_counts"] == {"planned_not_executed": 1}
+
+
+class _FakeResponse:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, traceback):
+        return False
+
+    def read(self):
+        return b'{"choices":[{"message":{"content":"ok"}}]}'
+
+
+def test_provider_request_body_extra_is_forwarded_safely(tmp_path):
+    runner = _load_runner()
+    source_dir, _ = _source_bundle(tmp_path)
+    config = _config(tmp_path, source_dir)
+    config["request_body_extra"] = {"thinking": {"type": "disabled"}}
+    model = config["models"][0]
+
+    with patch.object(
+        runner.phase5_runtime.urllib.request,
+        "urlopen",
+        return_value=_FakeResponse(),
+    ) as mocked_urlopen:
+        runner.phase5_runtime.call_chat_completion(config, model, "test", "secret")
+
+    request = mocked_urlopen.call_args.args[0]
+    payload = json.loads(request.data.decode("utf-8"))
+    assert payload["thinking"] == {"type": "disabled"}
+    assert payload["model"] == "qwen-test"
+
+
+def test_provider_request_body_extra_cannot_override_core_fields(tmp_path):
+    runner = _load_runner()
+    source_dir, _ = _source_bundle(tmp_path)
+    config = _config(tmp_path, source_dir)
+    config["request_body_extra"] = {"model": "unexpected-model"}
+
+    with pytest.raises(ValueError, match="request_body_extra cannot override"):
+        runner.phase5_runtime.call_chat_completion(
+            config,
+            config["models"][0],
+            "test",
+            "secret",
+        )

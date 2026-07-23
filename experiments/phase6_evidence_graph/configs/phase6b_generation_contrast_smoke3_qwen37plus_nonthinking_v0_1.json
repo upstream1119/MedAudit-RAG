@@ -1,0 +1,41 @@
+{
+  "config_version": "phase6b-generation-contrast-smoke3-qwen37plus-nonthinking-v0.1",
+  "dataset_version": "dev50-v1.0",
+  "kb_version": "KB-medium-v1",
+  "prompt_version": "phase6b-generator-v0.1",
+  "inference_profile": "qwen37plus-nonthinking-v0.1",
+  "run_mode": "dry_run_no_api_call",
+  "execute_model_calls": false,
+  "dataset_path": "revision/benchmark/dev50/dev50_v1_0_frozen.jsonl",
+  "input_run_dir": "revision/phase6/graph_runs/phase6b_rerank_frozen15_v0_3_20260720_01",
+  "output_root": "revision/phase7/source_runs",
+  "run_id_prefix": "phase7_source_qwen37plus_nonthinking_smoke3_v0_1",
+  "sample_ids": [
+    "PMSQA_DEV_001",
+    "PMSQA_DEV_002",
+    "PMSQA_DEV_003"
+  ],
+  "max_evidence_snippets": 4,
+  "max_evidence_chars_per_snippet": 420,
+  "max_output_tokens": 300,
+  "methods": [
+    {
+      "method_id": "vector_only_rag",
+      "description": "Generate from evidence ordered by the original vector ranking."
+    },
+    {
+      "method_id": "graph_enhanced_rag",
+      "description": "Generate from evidence ordered by runtime-constraint graph reranking and constraint audit signals."
+    }
+  ],
+  "models": [
+    {
+      "model_provider": "dashscope",
+      "model_name": "qwen3.7-plus",
+      "role": "generator",
+      "price_input_per_1m_cny": 0.0,
+      "price_output_per_1m_cny": 0.0,
+      "cost_note": "Free-tier development smoke; non-thinking profile."
+    }
+  ]
+}

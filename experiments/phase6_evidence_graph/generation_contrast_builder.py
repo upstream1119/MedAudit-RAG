@@ -287,6 +287,7 @@ def build_records(config: dict[str, Any]) -> tuple[list[dict[str, Any]], list[di
     max_snippets = int(config["max_evidence_snippets"])
     max_chars = int(config["max_evidence_chars_per_snippet"])
     max_output_tokens = int(config["max_output_tokens"])
+    inference_profile = str(config.get("inference_profile") or "legacy-default")
 
     for sample_id in _sample_ids(config):
         artifact = _read_json(artifact_dir / f"{sample_id}.json")
@@ -316,6 +317,7 @@ def build_records(config: dict[str, Any]) -> tuple[list[dict[str, Any]], list[di
                     "prompt_version": config["prompt_version"],
                     "dataset_version": config["dataset_version"],
                     "kb_version": config["kb_version"],
+                    "inference_profile": inference_profile,
                 }
                 cache_key = _stable_hash(key_payload)
                 input_tokens = _estimate_tokens(prompt)
@@ -376,6 +378,7 @@ def _write_token_estimate_csv(path: Path, rows: list[dict[str, Any]]) -> None:
         "prompt_version",
         "dataset_version",
         "kb_version",
+        "inference_profile",
         "cache_key",
         "estimated_input_tokens",
         "estimated_output_tokens",
@@ -408,6 +411,7 @@ def _summary_markdown(config: dict[str, Any], prompts: list[dict[str, Any]], cal
             f"- dataset_version: `{config['dataset_version']}`",
             f"- kb_version: `{config['kb_version']}`",
             f"- prompt_version: `{config['prompt_version']}`",
+            f"- inference_profile: `{config.get('inference_profile') or 'legacy-default'}`",
             f"- run_mode: `{config['run_mode']}`",
             "",
             "## Scope",
@@ -449,6 +453,7 @@ def run_builder(config: dict[str, Any], *, output_dir: Path | None = None) -> di
         "dataset_version": config.get("dataset_version"),
         "kb_version": config.get("kb_version"),
         "prompt_version": config.get("prompt_version"),
+        "inference_profile": config.get("inference_profile") or "legacy-default",
         "input_run_dir": str(_resolve_path(config["input_run_dir"])),
         "external_model_calls": 0,
         "estimated_cost": 0,
@@ -456,6 +461,7 @@ def run_builder(config: dict[str, Any], *, output_dir: Path | None = None) -> di
     summary = {
         "run_id": run_id,
         "config_version": config.get("config_version"),
+        "inference_profile": config.get("inference_profile") or "legacy-default",
         "sample_count": len(set(row["sample_id"] for row in prompts)),
         "planned_calls": len(call_plan),
         "method_count": len(set(row["method_id"] for row in prompts)),

@@ -143,12 +143,23 @@ def extract_usage(response_json: dict[str, Any]) -> tuple[int, int, int]:
 
 
 def call_chat_completion(config: dict[str, Any], model: dict[str, Any], prompt: str, api_key: str) -> dict[str, Any]:
+    request_body_extra = config.get("request_body_extra", {})
+    if not isinstance(request_body_extra, dict):
+        raise ValueError("request_body_extra must be a JSON object")
+    protected_fields = {"model", "messages", "temperature", "max_tokens"}
+    overridden_fields = sorted(protected_fields.intersection(request_body_extra))
+    if overridden_fields:
+        raise ValueError(
+            "request_body_extra cannot override core fields: "
+            + ", ".join(overridden_fields)
+        )
     payload = {
         "model": model["model_name"],
         "messages": [{"role": "user", "content": prompt}],
         "temperature": float(config["temperature"]),
         "max_tokens": int(config["max_output_tokens"]),
     }
+    payload.update(request_body_extra)
     data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     request = urllib.request.Request(
         str(config["api_base_url"]),
@@ -185,6 +196,7 @@ def cached_or_call(
             "prompt_version",
             "dataset_version",
             "kb_version",
+            "inference_profile",
             "cache_key",
             "evidence_context_source",
             "evidence_snippet_count",
@@ -295,6 +307,7 @@ def write_token_usage_csv(path: Path, rows: list[dict[str, Any]]) -> None:
         "prompt_version",
         "dataset_version",
         "kb_version",
+        "inference_profile",
         "cache_key",
         "status",
         "input_tokens",
