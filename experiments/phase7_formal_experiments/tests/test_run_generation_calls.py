@@ -192,6 +192,16 @@ def test_execute_mode_reuses_cache_without_external_call(tmp_path, monkeypatch):
     assert summary["status_counts"] == {"cache_hit": 2}
     assert summary["input_tokens_total"] == 24
     assert summary["output_tokens_total"] == 8
+    output_rows = [
+        json.loads(line)
+        for line in (Path(summary["output_dir"]) / "raw_model_outputs.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
+    ]
+    assert [row["latency_ms"] for row in output_rows] == [None, None]
+    assert {row["latency_source"] for row in output_rows} == {
+        "unavailable_legacy_cache"
+    }
 
 
 def test_retry_failed_selects_only_failed_cache_keys(tmp_path):
@@ -256,3 +266,62 @@ def test_provider_request_body_extra_cannot_override_core_fields(tmp_path):
             "test",
             "secret",
         )
+
+
+def test_external_calls_record_latency_attempts_and_csv(tmp_path, monkeypatch):
+    runner = _load_runner()
+    source_dir, rows = _source_bundle(tmp_path)
+    config = _config(tmp_path, source_dir)
+    monkeypatch.setenv(config["api_key_env"], "test-key")
+    monkeypatch.setattr(
+        runner.phase5_runtime,
+        "call_chat_completion",
+        lambda *args, **kwargs: {
+            "choices": [{"message": {"content": "测试回答"}}],
+            "usage": {
+                "prompt_tokens": 12,
+                "completion_tokens": 4,
+                "total_tokens": 16,
+            },
+        },
+    )
+    perf_values = iter([10.0, 10.125, 20.0, 20.25])
+    monkeypatch.setattr(
+        runner.phase5_runtime.time,
+        "perf_counter",
+        lambda: next(perf_values),
+    )
+
+    summary = runner.run_generation_calls(
+        config,
+        execute=True,
+        confirm_external_call=True,
+    )
+
+    output_dir = Path(summary["output_dir"])
+    raw_rows = [
+        json.loads(line)
+        for line in (output_dir / "raw_model_outputs.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
+    ]
+    assert [row["latency_ms"] for row in raw_rows] == [125.0, 250.0]
+    assert {row["latency_source"] for row in raw_rows} == {
+        "measured_external_call"
+    }
+    assert [row["attempt_count"] for row in raw_rows] == [1, 1]
+
+    cached = json.loads(
+        (Path(config["cache_dir"]) / f"{rows[0]['cache_key']}.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert cached["latency_ms"] == 125.0
+    assert cached["attempt_count"] == 1
+
+    csv_text = (output_dir / "token_usage_actual.csv").read_text(
+        encoding="utf-8-sig"
+    )
+    assert "latency_ms" in csv_text.splitlines()[0]
+    assert "latency_source" in csv_text.splitlines()[0]
+    assert "attempt_count" in csv_text.splitlines()[0]

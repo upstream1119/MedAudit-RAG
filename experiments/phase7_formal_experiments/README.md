@@ -1,6 +1,6 @@
 # Phase 7 Formal Experiments
 
-本目录用于运行生成侧配对实验。当前已完成 Phase 7-A1 执行器验证和 Phase 7-A2 双候选模型 3 样本真实 smoke；12/12 次调用成功，但仍未形成 Graph-enhanced 效果结论。
+本目录用于运行生成侧配对实验。当前已完成 Phase 7-A1 执行器验证、Phase 7-A2 双候选模型 3 样本真实 smoke，以及 Phase 7-A2.1 延迟记录和生成回答 claim-level 证据审计；12/12 次 smoke 调用成功，但仍未形成 Graph-enhanced 效果结论。
 
 ## 当前输入
 
@@ -40,6 +40,26 @@ python -m experiments.phase7_formal_experiments.run_generation_calls `
 - GLM 暂列 Frozen15 主候选，Qwen 作为次级稳健性候选；主模型尚未冻结。
 - 详细人工审计见 `revision/phase7/phase7a2_candidate_model_comparison_smoke3_v0_1.md`。
 
+Phase 7-A2.1 新增运行记录字段：
+
+- `latency_ms`：从单条外部模型调用开始到成功返回或最终失败的累计模型阶段延迟，包含该条调用内部的重试等待。
+- `latency_source`：区分真实测量、缓存回放、旧缓存无延迟和非执行状态。
+- `attempt_count`：该条外部调用的实际尝试次数。
+
+两次独立缓存的单调用探针均成功：GLM 为 `1921.09 ms`，Qwen 为 `2126.38 ms`。每个模型只有 1 个观测，不能据此推断稳定延迟差异或模型速度排名。
+
+对既有生成输出执行确定性 claim-level 证据审计：
+
+```powershell
+$env:PYTHONPATH='.'
+python -m experiments.phase7_formal_experiments.audit_generation_claims `
+  --generation-run-dir <generation_run_dir> `
+  --output-dir <new_output_dir> `
+  --evidence-budget 4
+```
+
+审计器根据生成方法分别恢复 `rank_before` 或 `rank_after` 证据顺序，并检查缓存键集合、父资产不可变、无 gold-only 字段泄漏和两次运行确定性。审计结果用于开发诊断；由于当前 claim 对齐器对回答长度和措辞敏感，状态计数不得直接当作论文 hallucination rate。
+
 ## 输出资产
 
 每次运行都会保存：
@@ -52,6 +72,8 @@ python -m experiments.phase7_formal_experiments.run_generation_calls `
 - `failed_cases.jsonl`
 - `token_usage_actual.csv`
 - `summary.md`
+
+其中真实新调用会在 `raw_model_outputs.jsonl`、缓存 JSON 和 `token_usage_actual.csv` 中同时保存延迟与尝试次数。2026-07-22 以前生成的旧缓存没有历史延迟，回放时明确标记为 `unavailable_legacy_cache`，不会补造数据。
 
 模型输入与评测 metadata 继续物理分离。`expected_decision`、gold evidence、risk labels 和 forbidden claims 不进入模型 prompt。
 

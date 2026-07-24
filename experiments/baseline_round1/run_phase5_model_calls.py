@@ -207,6 +207,7 @@ def cached_or_call(
     if cache_path.exists():
         cached = load_json(cache_path)
         input_tokens, output_tokens, total_tokens = extract_usage(cached["raw_response"])
+        cached_latency = cached.get("latency_ms")
         return {
             **base,
             "status": "cache_hit",
@@ -216,6 +217,13 @@ def cached_or_call(
             "output_tokens": output_tokens,
             "total_tokens": total_tokens,
             "estimated_cost_cny": round(estimate_cost(input_tokens, output_tokens, model), 8),
+            "latency_ms": cached_latency,
+            "latency_source": (
+                "replayed_from_cache"
+                if cached_latency is not None
+                else "unavailable_legacy_cache"
+            ),
+            "attempt_count": cached.get("attempt_count"),
             "error_type": "",
             "error_message": "",
         }
@@ -232,6 +240,9 @@ def cached_or_call(
             "estimated_input_tokens": call_record.get("estimated_input_tokens", 0),
             "estimated_output_tokens": call_record.get("estimated_output_tokens", 0),
             "estimated_cost_cny": call_record.get("estimated_cost_cny", 0),
+            "latency_ms": None,
+            "latency_source": "not_applicable",
+            "attempt_count": 0,
             "error_type": "",
             "error_message": "",
         }
@@ -246,14 +257,19 @@ def cached_or_call(
             "output_tokens": 0,
             "total_tokens": 0,
             "estimated_cost_cny": 0,
+            "latency_ms": None,
+            "latency_source": "not_applicable",
+            "attempt_count": 0,
             "error_type": "missing_api_key",
             "error_message": f"Missing API key env: {config['api_key_env']}",
         }
 
     last_error = ""
+    call_started_at = time.perf_counter()
     for attempt in range(int(config["max_retries"]) + 1):
         try:
             raw_response = call_chat_completion(config, model, prompt_record["prompt"], api_key)
+            latency_ms = round((time.perf_counter() - call_started_at) * 1000, 2)
             raw_output = extract_output_text(raw_response)
             input_tokens, output_tokens, total_tokens = extract_usage(raw_response)
             payload = {
@@ -261,6 +277,8 @@ def cached_or_call(
                 "cached_at": datetime.now().isoformat(timespec="seconds"),
                 "raw_output": raw_output,
                 "raw_response": raw_response,
+                "latency_ms": latency_ms,
+                "attempt_count": attempt + 1,
             }
             write_json(cache_path, payload)
             return {
@@ -272,6 +290,9 @@ def cached_or_call(
                 "output_tokens": output_tokens,
                 "total_tokens": total_tokens,
                 "estimated_cost_cny": round(estimate_cost(input_tokens, output_tokens, model), 8),
+                "latency_ms": latency_ms,
+                "latency_source": "measured_external_call",
+                "attempt_count": attempt + 1,
                 "error_type": "",
                 "error_message": "",
             }
@@ -284,6 +305,7 @@ def cached_or_call(
         if attempt < int(config["max_retries"]):
             time.sleep(1.5 * (attempt + 1))
 
+    latency_ms = round((time.perf_counter() - call_started_at) * 1000, 2)
     return {
         **base,
         "status": "failed",
@@ -293,6 +315,9 @@ def cached_or_call(
         "output_tokens": 0,
         "total_tokens": 0,
         "estimated_cost_cny": 0,
+        "latency_ms": latency_ms,
+        "latency_source": "measured_failed_external_call",
+        "attempt_count": int(config["max_retries"]) + 1,
         "error_type": "api_call_failed",
         "error_message": last_error,
     }
@@ -314,6 +339,9 @@ def write_token_usage_csv(path: Path, rows: list[dict[str, Any]]) -> None:
         "output_tokens",
         "total_tokens",
         "estimated_cost_cny",
+        "latency_ms",
+        "latency_source",
+        "attempt_count",
         "error_type",
     ]
     with path.open("w", encoding="utf-8-sig", newline="") as f:
