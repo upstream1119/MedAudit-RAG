@@ -1,0 +1,34 @@
+{
+  "config_version": "phase7-generation-frozen15-glm45air-nonthinking-v0.1",
+  "run_mode": "phase7_development_frozen15",
+  "source_run_dir": "revision/phase7/source_runs/phase7_source_glm45air_nonthinking_frozen15_v0_1",
+  "output_root": "experiments/phase7_formal_experiments/runs",
+  "cache_dir": "experiments/phase7_formal_experiments/.cache/model_outputs",
+  "run_id_prefix": "phase7_generation_glm45air_nonthinking_frozen15_v0_1",
+  "execute_model_calls": false,
+  "load_env_files": true,
+  "api_key_env": "ZHIPU_API_KEY",
+  "api_base_url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+  "request_timeout_seconds": 120,
+  "max_retries": 2,
+  "temperature": 0.0,
+  "max_output_tokens": 300,
+  "request_body_extra": {
+    "thinking": {
+      "type": "disabled"
+    }
+  },
+  "max_planned_calls": 30,
+  "max_estimated_input_tokens": 25000,
+  "max_estimated_output_tokens": 9000,
+  "models": [
+    {
+      "model_provider": "zhipu",
+      "model_name": "glm-4.5-air",
+      "role": "generator",
+      "price_input_per_1m_cny": 0.0,
+      "price_output_per_1m_cny": 0.0,
+      "cost_note": "20M granted-token development quota; thinking.type=disabled."
+    }
+  ]
+}

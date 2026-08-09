@@ -47,6 +47,7 @@ frontend/dist/
 frontend/.vite/
 
 # Local generated artifacts
+/.tmp/
 outputs/
 soft_copyright/
 soft_copyright_correction/

@@ -205,6 +205,77 @@ def test_reports_bid_to_qd_frequency_conflict():
     assert artifact["audit_summary"]["conflict"] == 1
 
 
+def test_matches_general_intravenous_query_to_specific_infusion_evidence():
+    reranker, builder = _load_modules()
+    graph = _build_graph(
+        builder,
+        sample_id="PMSQA_DEV_005",
+        question="1岁婴儿重症肺炎支原体肺炎能否静脉使用阿奇霉素？",
+        evidence=[
+            _retrieved_chunk(
+                source_file="儿童肺炎支原体肺炎诊疗指南（2023年版）.pdf",
+                content="重症推荐阿奇霉素静点，婴幼儿静脉制剂使用需慎重。",
+                page_number=14,
+                relevance_score=0.82,
+                final_score=0.82,
+            )
+        ],
+    )
+
+    artifact = reranker.build_reranking_artifact(graph, CONFIG)
+
+    route_audits = [
+        row
+        for row in artifact["constraint_audit"]
+        if row["constraint_type"] == "route"
+    ]
+    assert route_audits == [
+        {
+            "constraint_type": "route",
+            "query_value": "iv_unspecified",
+            "evidence_values": ["iv_infusion"],
+            "status": "matched",
+        }
+    ]
+
+
+def test_does_not_treat_dose_cause_as_conflicting_adjustment_action():
+    reranker, builder = _load_modules()
+    graph = _build_graph(
+        builder,
+        sample_id="PMSQA_DEV_035",
+        question="儿童肺炎治疗无效时是否只需要加大抗生素剂量？",
+        evidence=[
+            _retrieved_chunk(
+                content="再次评估时应考虑抗生素覆盖不足、剂量不足、耐药等原因。",
+                page_number=26,
+                relevance_score=0.84,
+                final_score=0.84,
+            )
+        ],
+    )
+
+    artifact = reranker.build_reranking_artifact(graph, CONFIG)
+
+    adjustment_audits = [
+        row
+        for row in artifact["constraint_audit"]
+        if row["constraint_type"] == "dose_adjustment"
+    ]
+    assert adjustment_audits == [
+        {
+            "constraint_type": "dose_adjustment",
+            "query_value": "increase",
+            "evidence_values": ["insufficient"],
+            "status": "unsupported",
+        }
+    ]
+    assert not any(
+        edge["type"] == "EVIDENCE_CONFLICTS_WITH_CONSTRAINT"
+        for edge in artifact["runtime_constraint_graph"]["edges"]
+    )
+
+
 def test_preserves_vector_order_without_runtime_query_constraints():
     reranker, builder = _load_modules()
     graph = _build_graph(

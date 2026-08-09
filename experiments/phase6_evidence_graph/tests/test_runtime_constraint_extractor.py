@@ -101,6 +101,33 @@ def test_extracts_family_specific_combination_constraints():
     assert "combination_antimicrobial" not in cough_medicine
 
 
+def test_extracts_simultaneously_given_antipyretic_constraint():
+    extractor = _load_extractor_module()
+
+    values = _values_by_type(
+        extractor.extract_runtime_constraints(
+            "儿童发热时不应同时给予布洛芬和对乙酰氨基酚。"
+        )
+    )
+
+    assert values["combination_antipyretic"] == {"coadministration"}
+
+
+def test_resolves_both_agents_to_preceding_antipyretic_names_in_guideline_text():
+    extractor = _load_extractor_module()
+
+    values = _values_by_type(
+        extractor.extract_runtime_constraints(
+            "When using paracetamol or ibuprofen in children with fever: "
+            "continue only as long as the child appears distressed- "
+            "consider changing to the other agent if the child's distress is "
+            "not alleviated- do not give both agents simultaneously."
+        )
+    )
+
+    assert values["combination_antipyretic"] == {"coadministration"}
+
+
 def test_extracts_age_weight_allergy_route_and_monitoring_targets():
     extractor = _load_extractor_module()
 

@@ -1,0 +1,17 @@
+{
+  "config_version": "benchmark-anchor-review-v0.1",
+  "expected_source_count": 22,
+  "max_pending_per_source": 5,
+  "preferred_granularities": [
+    512,
+    128,
+    1024
+  ],
+  "min_verified_text_chars": 10,
+  "min_alnum_ratio": 0.25,
+  "scope_limited_evidence_types": [
+    "medicine_identity",
+    "dosage_form",
+    "essential_medicine_status"
+  ]
+}

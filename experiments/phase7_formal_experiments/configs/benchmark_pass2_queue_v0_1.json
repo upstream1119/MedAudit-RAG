@@ -1,0 +1,25 @@
+{
+  "blind_seed": 20260802,
+  "config_version": "benchmark-pass2-queue-config-v0.1",
+  "dataset_version": "benchmark-v1.0-pass2-pending",
+  "expected_merged_count": 138,
+  "expected_original_promotable_before_scope": 115,
+  "expected_scope_exclusions": 1,
+  "expected_supplement_promotable": 24,
+  "external_model_calls": 0,
+  "kb_version": "KB-medium-v1",
+  "original_pass1_queue": "revision/benchmark/benchmark_v1/annotation_pass1_queue_v0_1.csv",
+  "pass2_linkage_output": "revision/benchmark/benchmark_v1/benchmark_pass2_linkage_v0_1.json",
+  "pass2_report_output": "revision/benchmark/benchmark_v1/benchmark_pass2_generation_report_v0_1.json",
+  "pass2_review_queue_output": "revision/benchmark/benchmark_v1/benchmark_pass2_review_queue_v0_1.csv",
+  "protocol_version": "benchmark-protocol-v0.1",
+  "scope_audit": "revision/benchmark/benchmark_v1/pass1_scope_consistency_audit_v0_1.json",
+  "supplement_pass1_queue": "revision/benchmark/benchmark_v1/benchmark_supplement_pass1_queue_v0_1.csv",
+  "target_final_count": 120,
+  "target_final_decision_distribution": {
+    "answer": 40,
+    "boundary_refusal": 16,
+    "insufficient_evidence": 24,
+    "review_required": 40
+  }
+}

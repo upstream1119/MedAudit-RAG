@@ -373,6 +373,67 @@ def test_reextracts_new_caution_constraint_from_parent_evidence_content():
     } >= {"age_group", "contraindication_action"}
 
 
+def test_supports_general_intravenous_claim_with_specific_infusion_evidence():
+    aligner = _load_module()
+    artifact = _artifact(
+        sample_id="PMSQA_DEV_005",
+        evidence=[
+            _evidence(
+                evidence_id="evidence::mpp::p14",
+                content="重症推荐阿奇霉素静点。",
+                constraints=[_constraint("route", "iv_infusion")],
+                source_id="SRC-003",
+                page_number=14,
+            )
+        ],
+    )
+
+    result = aligner.align_claims(
+        artifact,
+        "重症儿童可以静脉使用阿奇霉素。",
+        _config(),
+    )
+
+    claim = result["claims"][0]
+    assert claim["support_state"] == "supported"
+    assert claim["constraint_checks"][0]["state"] == "matched"
+
+
+def test_dose_cause_and_rejected_adjustment_are_not_false_contradictions():
+    aligner = _load_module()
+    artifact = _artifact(
+        sample_id="PMSQA_DEV_035",
+        evidence=[
+            _evidence(
+                evidence_id="evidence::cap::p26",
+                content="再次评估时应考虑抗生素覆盖不足、剂量不足、耐药等原因。",
+                constraints=[_constraint("dose_adjustment", "insufficient")],
+                source_id="SRC-002",
+                page_number=26,
+            )
+        ],
+    )
+
+    result = aligner.align_claims(
+        artifact,
+        "应考虑剂量不足，而非仅加大剂量。",
+        _config(),
+    )
+
+    claim = result["claims"][0]
+    checks = {
+        check["claim_value"]: check
+        for check in claim["constraint_checks"]
+        if check["constraint_type"] == "dose_adjustment"
+    }
+    assert checks["insufficient"]["claim_stance"] == "assert"
+    assert checks["insufficient"]["state"] == "matched"
+    assert checks["increase"]["claim_stance"] == "reject"
+    assert checks["increase"]["state"] == "unsupported"
+    assert claim["support_state"] == "unsupported"
+    assert claim["contradicting_evidence_ids"] == []
+
+
 def test_treats_contraindication_actions_as_normative_values():
     aligner = _load_module()
     artifact = _artifact(

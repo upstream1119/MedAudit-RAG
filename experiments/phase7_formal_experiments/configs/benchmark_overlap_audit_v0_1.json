@@ -1,0 +1,27 @@
+{
+  "config_version": "benchmark-overlap-audit-config-v0.1",
+  "audit_version": "benchmark-overlap-audit-v0.1",
+  "input_dataset_version": "benchmark-v1.0-draft",
+  "output_dataset_version": "benchmark-v1.0-overlap-audited-draft",
+  "schema_version": "benchmark-schema-v0.1",
+  "protocol_version": "benchmark-protocol-v0.1",
+  "kb_version": "KB-medium-v1",
+  "ngram_size": 3,
+  "jaccard_threshold": 0.65,
+  "normalization_rules": [
+    "unicode_nfkc",
+    "lowercase_ascii",
+    "remove_whitespace_and_punctuation",
+    "preserve_chinese_ascii_letters_digits"
+  ],
+  "grouping_fields": [
+    "provisional_fact_cluster_id",
+    "evidence_anchor_group_id"
+  ],
+  "expected_candidate_count": 144,
+  "expected_dev50_count": 50,
+  "expected_independence_unit_count": 72,
+  "fail_on_unresolved_review": true,
+  "audited_candidate_status": "overlap_audited_draft",
+  "external_model_calls": 0
+}

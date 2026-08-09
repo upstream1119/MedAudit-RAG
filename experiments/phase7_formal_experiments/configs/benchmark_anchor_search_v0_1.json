@@ -1,0 +1,125 @@
+{
+  "config_version": "benchmark-anchor-search-v0.1",
+  "parser_version": "dual-track-medical-parser-v1",
+  "chunker_version": "semantic-chunker-v1",
+  "granularities": [
+    128,
+    512,
+    1024
+  ],
+  "min_text_chars": 30,
+  "max_text_chars": 6000,
+  "title_only_max_chars": 160,
+  "scope_limited_evidence_types": [
+    "medicine_identity",
+    "dosage_form",
+    "essential_medicine_status"
+  ],
+  "topic_terms": {
+    "age_weight": [
+      "年龄",
+      "月龄",
+      "体重",
+      "婴儿",
+      "新生儿",
+      "早产儿",
+      "adolescent",
+      "infant",
+      "neonate",
+      "body weight"
+    ],
+    "combination": [
+      "联合用药",
+      "联合使用",
+      "联合治疗",
+      "合并使用",
+      "联用",
+      "combination therapy",
+      "concomitant"
+    ],
+    "contraindication": [
+      "禁忌",
+      "慎用",
+      "不推荐",
+      "不得使用",
+      "避免使用",
+      "过敏史",
+      "contraindication",
+      "should not",
+      "avoid"
+    ],
+    "course": [
+      "疗程",
+      "连续使用",
+      "连用",
+      "治疗时间",
+      "给药天数",
+      "course",
+      "duration"
+    ],
+    "dose": [
+      "剂量",
+      "用量",
+      "最大剂量",
+      "mg/kg",
+      "mg/(kg",
+      "mg·kg",
+      "dose",
+      "dosage"
+    ],
+    "frequency": [
+      "每日一次",
+      "每日两次",
+      "一天一次",
+      "一天两次",
+      "给药频次",
+      "qd",
+      "bid",
+      "tid",
+      "q12h",
+      "q8h",
+      "frequency"
+    ],
+    "monitoring": [
+      "监测",
+      "复查",
+      "再评估",
+      "疗效评估",
+      "不良反应",
+      "肝功能",
+      "肾功能",
+      "心电图",
+      "monitoring",
+      "reassess",
+      "clinical reassessment"
+    ],
+    "off_label": [
+      "超说明书",
+      "说明书外",
+      "off-label",
+      "unlicensed"
+    ],
+    "prescription_boundary": [
+      "开处方",
+      "处方前",
+      "个体化处方",
+      "人工复核",
+      "医生评估",
+      "medical review",
+      "clinical review",
+      "prescription"
+    ],
+    "route": [
+      "静脉滴注",
+      "静脉注射",
+      "口服",
+      "雾化吸入",
+      "肌内注射",
+      "给药途径",
+      "intravenous",
+      "oral",
+      "inhalation",
+      "route"
+    ]
+  }
+}

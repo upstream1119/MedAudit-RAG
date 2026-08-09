@@ -20,6 +20,15 @@ from .runtime_constraint_extractor import (
 
 ARTIFACT_SCHEMA_VERSION = "phase6b-reranking-artifact-v0.2"
 _SCORE_KEYS = ("relevance", "authority", "constraint_type_coverage")
+_EXCLUSIVE_CONSTRAINT_TYPES = frozenset(
+    {
+        "dose",
+        "frequency",
+        "route",
+        "evidence_scope",
+    }
+)
+_INTRAVENOUS_ROUTE_VALUES = frozenset({"iv_unspecified", "iv_infusion"})
 
 
 def canonical_sha256(value: dict[str, Any]) -> str:
@@ -146,7 +155,26 @@ def _values_match(
         return True
     if constraint_type == "dose":
         return _dose_values_match(query_value, evidence_value)
+    if constraint_type == "route":
+        # Specific infusion evidence supports a general intravenous query,
+        # but general intravenous evidence cannot prove the specific route.
+        return query_value == "iv_unspecified" and evidence_value == "iv_infusion"
     return False
+
+
+def _values_conflict(
+    constraint_type: str,
+    query_value: str,
+    evidence_value: str,
+) -> bool:
+    if _values_match(constraint_type, query_value, evidence_value):
+        return False
+    if constraint_type == "route" and {
+        query_value,
+        evidence_value,
+    }.issubset(_INTRAVENOUS_ROUTE_VALUES):
+        return False
+    return constraint_type in _EXCLUSIVE_CONSTRAINT_TYPES
 
 
 def _constraint_audit(
@@ -170,7 +198,10 @@ def _constraint_audit(
             for value in evidence_values
         ):
             status = "matched"
-        elif evidence_values:
+        elif any(
+            _values_conflict(constraint_type, query_value, value)
+            for value in evidence_values
+        ):
             status = "conflict"
         else:
             status = "unsupported"
@@ -247,15 +278,21 @@ def _runtime_constraint_graph(
                 constraint["constraint_type"],
                 [],
             ):
-                relation = (
-                    "EVIDENCE_MATCHES_CONSTRAINT_VALUE"
-                    if _values_match(
-                        constraint["constraint_type"],
-                        query_value,
-                        constraint["normalized_value"],
-                    )
-                    else "EVIDENCE_CONFLICTS_WITH_CONSTRAINT"
-                )
+                evidence_value = constraint["normalized_value"]
+                if _values_match(
+                    constraint["constraint_type"],
+                    query_value,
+                    evidence_value,
+                ):
+                    relation = "EVIDENCE_MATCHES_CONSTRAINT_VALUE"
+                elif _values_conflict(
+                    constraint["constraint_type"],
+                    query_value,
+                    evidence_value,
+                ):
+                    relation = "EVIDENCE_CONFLICTS_WITH_CONSTRAINT"
+                else:
+                    continue
                 edge = {
                     "source": row["evidence_id"],
                     "target": query_node_id,
@@ -263,7 +300,7 @@ def _runtime_constraint_graph(
                 }
                 if relation == "EVIDENCE_CONFLICTS_WITH_CONSTRAINT":
                     edge["properties"] = {
-                        "evidence_value": constraint["normalized_value"]
+                        "evidence_value": evidence_value
                     }
                 edges.append(edge)
 

@@ -1,0 +1,41 @@
+{
+  "audit_version": "pass1-scope-consistency-audit-v0.1",
+  "promotable_outcomes": [
+    "accepted",
+    "revise"
+  ],
+  "medication_markers": [
+    "药",
+    "处方",
+    "剂量",
+    "频次",
+    "给药",
+    "疗程",
+    "抗菌",
+    "抗生素",
+    "过敏",
+    "相互作用",
+    "静脉",
+    "口服",
+    "雾化",
+    "疫苗",
+    "drug",
+    "dose",
+    "antibiotic",
+    "medication"
+  ],
+  "non_medication_claim_types": [
+    "infant_temperature_measurement_method",
+    "lumbar_puncture_indication",
+    "diagnostic_features",
+    "symptom_course"
+  ],
+  "scope_reject_terms": [
+    "非药物",
+    "超出儿科用药",
+    "不属于儿科用药",
+    "不是用药",
+    "非用药"
+  ],
+  "external_model_calls": 0
+}

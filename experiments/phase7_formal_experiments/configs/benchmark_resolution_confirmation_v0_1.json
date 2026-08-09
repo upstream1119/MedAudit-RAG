@@ -1,0 +1,43 @@
+{
+  "allowed_confidence": [
+    "high",
+    "medium"
+  ],
+  "allowed_decisions": [
+    "answer",
+    "review_required",
+    "insufficient_evidence",
+    "boundary_refusal"
+  ],
+  "allowed_gold_evidence_status": [
+    "page_span_located",
+    "policy_rule"
+  ],
+  "allowed_kb_support": [
+    "supported_by_current_kb",
+    "partial_current_kb_support",
+    "not_supported_by_current_kb",
+    "policy_rule"
+  ],
+  "config_version": "benchmark-resolution-confirmation-config-v0.1",
+  "dataset_version": "benchmark-v1.0-pass2-pending",
+  "expected_assistant_draft_sha256": "8570004a0094f78da71ea26a24bc3bf5079d3db134933ed169f994dfbb60059b",
+  "expected_resolution_count": 34,
+  "expected_resolution_queue_sha256": "645ed72b93006379bdeff39c2c344a1469a985082dd405fa99dcd7c5a4322284",
+  "external_model_calls": 0,
+  "input_paths": {
+    "assistant_draft": "revision/benchmark/benchmark_v1/annotation_resolution_assistant_draft_v0_1.csv",
+    "resolution_queue": "revision/benchmark/benchmark_v1/annotation_resolution_queue_v0_1.csv"
+  },
+  "kb_version": "KB-medium-v1",
+  "output_paths": {
+    "author_review": "revision/benchmark/benchmark_v1/annotation_resolution_author_review_v0_1.csv",
+    "author_review_guide": "revision/benchmark/benchmark_v1/annotation_resolution_author_review_guide_v0_1.md",
+    "resolved_queue": "revision/benchmark/benchmark_v1/annotation_resolution_resolved_v0_1.csv",
+    "resolved_summary": "revision/benchmark/benchmark_v1/annotation_resolution_resolved_summary_v0_1.json"
+  },
+  "required_annotator_role": "author",
+  "required_confirmation_status": "confirmed",
+  "resolved_version": "benchmark-resolution-resolved-v0.1",
+  "review_version": "annotation-resolution-author-review-v0.1"
+}

@@ -7,7 +7,9 @@ import unicodedata
 from collections.abc import Iterable
 
 
-RULESET_VERSION = "phase6b-runtime-constraint-rules-v0.4"
+RULESET_VERSION = "phase6b-runtime-constraint-rules-v0.6"
+_COMBINATION_CONTEXT_BEFORE_CHARS = 192
+_COMBINATION_CONTEXT_AFTER_CHARS = 96
 
 _DAILY_DOSE_PATTERN = re.compile(
     r"(?P<value>\d+(?:\.\d+)?)\s*mg\s*/\s*\(?\s*kg"
@@ -34,7 +36,7 @@ _PATIENT_WEIGHT_PATTERN = re.compile(
     re.IGNORECASE,
 )
 _COMBINATION_CUE_PATTERN = re.compile(
-    r"(?:同时(?:使用|服用|口服|吃)|联合(?:使用|用药)|多种药物|"
+    r"(?:同时(?:使用|服用|口服|吃|给予)|联合(?:使用|用药)|多种药物|"
     r"\bboth agents\b|\bsimultaneously\b)",
     re.IGNORECASE,
 )
@@ -295,8 +297,14 @@ def extract_runtime_constraints(*texts: str | Iterable[str]) -> list[dict]:
             )
 
         for combination_cue in _COMBINATION_CUE_PATTERN.finditer(text):
-            context_start = max(0, combination_cue.start() - 96)
-            context_end = min(len(text), combination_cue.end() + 96)
+            context_start = max(
+                0,
+                combination_cue.start() - _COMBINATION_CONTEXT_BEFORE_CHARS,
+            )
+            context_end = min(
+                len(text),
+                combination_cue.end() + _COMBINATION_CONTEXT_AFTER_CHARS,
+            )
             local_context = text[context_start:context_end]
             for constraint_type, family_pattern in _COMBINATION_FAMILY_PATTERNS:
                 family_match = family_pattern.search(local_context)

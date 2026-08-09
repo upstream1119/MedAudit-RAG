@@ -17,11 +17,11 @@ from .runtime_constraint_extractor import extract_runtime_constraints
 
 
 ARTIFACT_SCHEMA_VERSION = "phase6b-claim-alignment-artifact-v0.2"
-ALIGNMENT_RULESET_VERSION = "phase6b-claim-alignment-rules-v0.2"
+ALIGNMENT_RULESET_VERSION = "phase6b-claim-alignment-rules-v0.3"
 
 _CLAIM_SPLIT_PATTERN = re.compile(r"[。！？!?；;\n]+")
 _REJECTION_PATTERN = re.compile(
-    r"(?:不足以支持|不可以|不能|不应|不得|不支持|无依据|不推荐|避免|"
+    r"(?:不足以支持|不可以|不能|不应|不得|不支持|无依据|不推荐|避免|而非|"
     r"禁用|\bdo\s+not\b|\bshould\s+not\b|\bmust\s+not\b|"
     r"\bnot\s+recommended\b)",
     re.IGNORECASE,
@@ -33,11 +33,12 @@ _EXCLUSIVE_CONSTRAINT_TYPES = frozenset(
         "route",
         "monitoring_window",
         "monitoring_action",
-        "dose_adjustment",
         "contraindication_action",
         "evidence_scope",
     }
 )
+_INTRAVENOUS_ROUTE_VALUES = frozenset({"iv_unspecified", "iv_infusion"})
+_CLAUSE_BOUNDARY_CHARS = "，,。；;！？!?\n"
 _OVERALL_STATE_PRECEDENCE = (
     "contradicted",
     "unsupported",
@@ -113,6 +114,24 @@ def detect_claim_stance(claim_text: str) -> str:
     return "reject" if _REJECTION_PATTERN.search(claim_text) else "assert"
 
 
+def _local_clause(text: str, position: int, surface_length: int) -> str:
+    left_boundary = max(
+        text.rfind(boundary, 0, position)
+        for boundary in _CLAUSE_BOUNDARY_CHARS
+    )
+    right_candidates = [
+        boundary_position
+        for boundary in _CLAUSE_BOUNDARY_CHARS
+        if (boundary_position := text.find(
+            boundary,
+            position + surface_length,
+        ))
+        >= 0
+    ]
+    right_boundary = min(right_candidates) if right_candidates else len(text)
+    return text[left_boundary + 1:right_boundary]
+
+
 def _constraint_stance(text: str, constraint: dict[str, Any]) -> str:
     """Determine polarity near a constraint instead of for the whole row."""
     if constraint["constraint_type"] in {
@@ -131,11 +150,13 @@ def _constraint_stance(text: str, constraint: dict[str, Any]) -> str:
             position = normalized_text.lower().find(surface_part.lower())
             if position < 0:
                 continue
-            start = max(0, position - 96)
-            end = min(
-                len(normalized_text), position + len(surface_part) + 64
+            return detect_claim_stance(
+                _local_clause(
+                    normalized_text,
+                    position,
+                    len(surface_part),
+                )
             )
-            return detect_claim_stance(normalized_text[start:end])
     return detect_claim_stance(normalized_text)
 
 
@@ -146,10 +167,32 @@ def _normalized_constraint_value(value: str) -> str:
     return normalized
 
 
-def _values_match(first: str, second: str) -> bool:
-    return _normalized_constraint_value(first) == _normalized_constraint_value(
-        second
-    )
+def _values_match(constraint_type: str, first: str, second: str) -> bool:
+    normalized_first = _normalized_constraint_value(first)
+    normalized_second = _normalized_constraint_value(second)
+    if normalized_first == normalized_second:
+        return True
+    if constraint_type == "route":
+        return (
+            normalized_first == "iv_unspecified"
+            and normalized_second == "iv_infusion"
+        )
+    return False
+
+
+def _values_conflict(constraint_type: str, first: str, second: str) -> bool:
+    if _values_match(constraint_type, first, second):
+        return False
+    normalized_values = {
+        _normalized_constraint_value(first),
+        _normalized_constraint_value(second),
+    }
+    if (
+        constraint_type == "route"
+        and normalized_values.issubset(_INTRAVENOUS_ROUTE_VALUES)
+    ):
+        return False
+    return constraint_type in _EXCLUSIVE_CONSTRAINT_TYPES
 
 
 def _evidence_constraint_index(
@@ -268,7 +311,11 @@ def _evaluate_constraint(
         {
             candidate["evidence_id"]
             for candidate in candidates
-            if _values_match(claim_value, candidate["normalized_value"])
+            if _values_match(
+                constraint_type,
+                claim_value,
+                candidate["normalized_value"],
+            )
             and candidate["stance"] == claim_stance
         }
     )
@@ -276,7 +323,11 @@ def _evaluate_constraint(
         {
             candidate["evidence_id"]
             for candidate in candidates
-            if _values_match(claim_value, candidate["normalized_value"])
+            if _values_match(
+                constraint_type,
+                claim_value,
+                candidate["normalized_value"],
+            )
             and candidate["stance"] != claim_stance
         }
     )
@@ -284,7 +335,23 @@ def _evaluate_constraint(
         {
             candidate["evidence_id"]
             for candidate in candidates
-            if not _values_match(claim_value, candidate["normalized_value"])
+            if not _values_match(
+                constraint_type,
+                claim_value,
+                candidate["normalized_value"],
+            )
+            and candidate["stance"] == "assert"
+        }
+    )
+    conflicting_alternative_ids = sorted(
+        {
+            candidate["evidence_id"]
+            for candidate in candidates
+            if _values_conflict(
+                constraint_type,
+                claim_value,
+                candidate["normalized_value"],
+            )
             and candidate["stance"] == "assert"
         }
     )
@@ -299,16 +366,16 @@ def _evaluate_constraint(
         if constraint_type == "evidence_scope" and alternative_ids:
             state = "scope_mismatch"
             evidence_ids = alternative_ids
-        elif constraint_type in _EXCLUSIVE_CONSTRAINT_TYPES and alternative_ids:
+        elif conflicting_alternative_ids:
             state = "conflict"
-            evidence_ids = alternative_ids
+            evidence_ids = conflicting_alternative_ids
         else:
             state = "unsupported"
             evidence_ids = []
     else:
-        if constraint_type in _EXCLUSIVE_CONSTRAINT_TYPES and alternative_ids:
+        if conflicting_alternative_ids:
             state = "matched"
-            evidence_ids = alternative_ids
+            evidence_ids = conflicting_alternative_ids
         else:
             state = "unsupported"
             evidence_ids = []

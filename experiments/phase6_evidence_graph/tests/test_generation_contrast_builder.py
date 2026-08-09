@@ -6,6 +6,16 @@ from experiments.phase6_evidence_graph.generation_contrast_builder import (
 )
 
 
+REPO_ROOT = Path(__file__).resolve().parents[3]
+FROZEN15_GLM_CONFIG = (
+    REPO_ROOT
+    / "experiments"
+    / "phase6_evidence_graph"
+    / "configs"
+    / "phase6b_generation_contrast_frozen15_glm45air_nonthinking_v0_1.json"
+)
+
+
 def _load_jsonl(path: Path) -> list[dict]:
     return [
         json.loads(line)
@@ -133,3 +143,45 @@ def test_inference_profile_is_part_of_cache_identity(tmp_path):
     assert {row["inference_profile"] for row in first_rows} == {
         "qwen-test-nonthinking-v0.1"
     }
+
+
+def test_frozen15_glm_plan_is_paired_bounded_and_fail_closed(tmp_path):
+    config = json.loads(FROZEN15_GLM_CONFIG.read_text(encoding="utf-8"))
+    output_dir = tmp_path / "frozen15"
+
+    summary = run_builder(config, output_dir=output_dir)
+    prompts = _load_jsonl(output_dir / "prompts.jsonl")
+    call_plan = _load_jsonl(output_dir / "call_plan.jsonl")
+
+    assert summary["sample_count"] == 15
+    assert summary["planned_calls"] == 30
+    assert len({row["cache_key"] for row in call_plan}) == 30
+    assert {
+        method: sum(row["method_id"] == method for row in call_plan)
+        for method in ("vector_only_rag", "graph_enhanced_rag")
+    } == {
+        "vector_only_rag": 15,
+        "graph_enhanced_rag": 15,
+    }
+    assert sum(int(row["estimated_input_tokens"]) for row in call_plan) == 24151
+    assert sum(int(row["estimated_output_tokens"]) for row in call_plan) == 9000
+
+    zero_evidence_pairs = {
+        (row["sample_id"], row["method_id"])
+        for row in prompts
+        if "本轮没有可用证据片段" in row["prompt"]
+    }
+    assert zero_evidence_pairs == {
+        ("PMSQA_DEV_003", "vector_only_rag"),
+        ("PMSQA_DEV_003", "graph_enhanced_rag"),
+        ("PMSQA_DEV_006", "vector_only_rag"),
+        ("PMSQA_DEV_006", "graph_enhanced_rag"),
+        ("PMSQA_DEV_039", "vector_only_rag"),
+        ("PMSQA_DEV_039", "graph_enhanced_rag"),
+    }
+    for row in prompts:
+        lowered = row["prompt"].lower()
+        assert "expected_decision" not in lowered
+        assert "gold" not in lowered
+        assert "forbidden_claim" not in lowered
+        assert "risk_labels" not in lowered
