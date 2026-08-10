@@ -1,0 +1,14 @@
+{
+  "config_version": "benchmark-anchor-expansion-review-v0.2",
+  "dataset_version": "benchmark-v1.0-pre-freeze",
+  "kb_version": "KB-medium-v1",
+  "expected_queue_size": 58,
+  "batch_size": 10,
+  "min_verified_text_chars": 40,
+  "min_alnum_ratio": 0.25,
+  "allowed_assistant_outcomes": [
+    "accepted_draft",
+    "revision_required",
+    "rejected_draft"
+  ]
+}

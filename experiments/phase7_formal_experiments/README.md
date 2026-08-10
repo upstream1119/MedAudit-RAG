@@ -515,3 +515,28 @@ D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_expe
 - 队列 SHA-256 为 `423198aefbb6110fb988f14317493c4c7a55802e1f50c7231947e26224bd9b1b`，确定性重跑哈希一致。
 - 输出文件为 `anchor_expansion_review_queue_v0_2.csv`、`anchor_expansion_summary_v0_2.json` 和 `anchor_expansion_review_guide_v0_2.md`。候选队列不是 gold anchor，下一步必须逐条进行作者核验与晋升。
 - 本步骤未调用外部模型/API，`input_tokens=0`、`output_tokens=0`、`estimated_cost=0`。
+
+## Phase 7-B3.6b 第二批锚点 AI 辅助核验草稿（2026-08-10）
+
+准备 6 个核验批次：
+
+```powershell
+$env:PYTHONPATH='.;backend'
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\benchmark_anchor_expansion_review.py --mode prepare
+```
+
+填写独立草稿文件后执行 fail-closed 校验：
+
+```powershell
+$env:PYTHONPATH='.;backend'
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\benchmark_anchor_expansion_review.py --mode validate
+```
+
+- 父队列固定为 58 条，SHA-256 为 `423198aefbb6110fb988f14317493c4c7a55802e1f50c7231947e26224bd9b1b`；批次规模为 `10/10/10/10/10/8`。
+- 最终 AI 辅助草稿分布为 `accepted_draft=27`、`revision_required=25`、`rejected_draft=6`，接受草稿覆盖 15 个来源。
+- 草稿 SHA-256 为 `62826dfa7f01c2ec039ad659a743ce3868e1a0a43b980ee1d9226d2ad3924a3a`；作者确认计数为 0。
+- `matched_topics` 只用于候选检索解释，不能直接作为证据支持的 claim type。核验脚本要求接受记录具有至少 40 个字符的可核对证据跨度，并拒绝作者字段预填、父队列漂移和非法枚举。
+- 输出为 `anchor_expansion_assistant_draft_v0_2.csv`、`anchor_expansion_review_audit_v0_2.json` 和 `anchor_expansion_review_summary_v0_2.md`。
+- 定向测试为 `6 passed`；标准 `PYTHONPATH=backend` 下后端/Phase 6/Phase 7 完整回归为 `320 passed`。
+- 本步骤未调用外部模型/API，`external_api_calls=0`、`input_tokens=0`、`output_tokens=0`、`estimated_cost=0`。
+- 这些输出只是 AI 辅助核验草稿，不是作者确认、Gold evidence、独立专家验证、临床验证或 Graph-enhanced 方法效果证据。
