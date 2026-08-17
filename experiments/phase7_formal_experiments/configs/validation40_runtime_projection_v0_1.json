@@ -1,0 +1,13 @@
+{
+  "config_version": "validation40-runtime-projection-config-v0.1",
+  "projection_version": "validation40-runtime-projection-v0.1",
+  "expected_count": 40,
+  "expected_dataset_split": "validation",
+  "expected_dataset_version": "benchmark-v1.0-guideline-grounded-author-adjudicated",
+  "expected_kb_version": "KB-medium-v1",
+  "expected_freeze_version": "benchmark-v1.0-freeze-v1.0",
+  "expected_source_sha256": "8f8e0c63e8fa829109df98f3e51d37324c978bf49462ad38f14bfe6f67c2e1f7",
+  "source_path": "revision/benchmark/benchmark_v1/benchmark120_validation40_v1_0.jsonl",
+  "output_dir": "revision/phase7/validation40_inputs",
+  "external_model_calls": 0
+}

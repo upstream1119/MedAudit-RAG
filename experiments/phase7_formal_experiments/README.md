@@ -762,3 +762,27 @@ D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_expe
 - 正式冻结得到 Gold 120 / Validation 40 / Pilot Test 80；决策分布为 `answer=69`、`review_required=11`、`insufficient_evidence=24`、`boundary_refusal=16`。
 - Gold、Validation、Pilot Test SHA-256 分别为 `34ce42a62f004da18d9132baa47980fcf4210ee353f86c865d7e08cc469c0348`、`8f8e0c63e8fa829109df98f3e51d37324c978bf49462ad38f14bfe6f67c2e1f7`、`14afa2988d9ff579471f2d082f9803ce3bfc9e030eb439e7cf2d4c6fa55d5da9`。
 - 独立内容审计和字节级幂等复跑均通过；Gold freeze 定向测试 `8 passed`，Phase 7 全量回归 `228 passed`。`gold_promotion_performed=true`、`freeze_performed=true`，但 `clinically_validated=false`，且本步骤外部模型/API、token 和费用均为 0。
+
+## Phase 7-C1a：Validation40 运行时输入隔离（2026-08-17）
+
+在任何检索、Prompt 构建或模型调用前，先从冻结 Validation40 生成严格 Gold 隔离的运行时投影：
+
+```powershell
+$env:PYTHONIOENCODING='utf-8'
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\validation40_runtime_projection.py --config experiments\phase7_formal_experiments\configs\validation40_runtime_projection_v0_1.json --repo-root .
+```
+
+- 固定源文件为 `benchmark120_validation40_v1_0.jsonl`，SHA-256 为 `8f8e0c63e8fa829109df98f3e51d37324c978bf49462ad38f14bfe6f67c2e1f7`。
+- 运行时行严格只含 `sample_id`、`question`、`dataset_version`、`kb_version`；不携带 decision、claims、risk labels、source/page/span 等评测字段。
+- 输出 40 条唯一记录和独立 selection manifest；Gold 字段泄漏为 0，`pilot_test_accessed=false`。
+- 输出采用 immutable preflight：同内容可幂等复跑，已有文件字节冲突时在写入前 fail closed。
+- 定向测试 `6 passed`，Phase 7 全量回归 `234 passed`；外部模型调用、input/output tokens 和估算费用均为 0。
+
+主要产物：
+
+- `revision/phase7/validation40_inputs/validation40_runtime_projection_v0_1.jsonl`
+- `revision/phase7/validation40_inputs/validation40_selection_manifest_v0_1.jsonl`
+- `revision/phase7/validation40_inputs/validation40_projection_audit_v0_1.json`
+- `revision/phase7/validation40_inputs/validation40_projection_summary_v0_1.md`
+
+下一步 Phase 7-C1b 只基于运行时投影构建离线检索与方法调用计划。Pilot Test 80 继续保持未见，真实模型调用仍需单独批准。
