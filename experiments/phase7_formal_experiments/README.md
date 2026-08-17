@@ -786,3 +786,29 @@ D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_expe
 - `revision/phase7/validation40_inputs/validation40_projection_summary_v0_1.md`
 
 下一步 Phase 7-C1b 只基于运行时投影构建离线检索与方法调用计划。Pilot Test 80 继续保持未见，真实模型调用仍需单独批准。
+
+## Phase 7-C1b：Validation40 离线实验预检（2026-08-17）
+
+在执行检索或调用外部模型前，先展开固定方法矩阵并锁定缓存键：
+
+```powershell
+$env:PYTHONIOENCODING='utf-8'
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\validation40_experiment_preflight.py --config experiments\phase7_formal_experiments\configs\validation40_experiment_preflight_v0_1.json --repo-root .
+```
+
+- 输入只允许来自 C1a 的 40 条 Gold 隔离运行时投影，SHA-256 固定为 `d6d425dddd5411ea4ea731e17780f1d2406bebadaf99a96a313e28c80feffbc5`。
+- 固定五种方法：Vanilla LLM、Naive RAG、Multi-granularity RAG、Trust-gated RAG 和 Graph-enhanced Full Method。
+- 生成 160 个离线检索任务和 200 个方法调用计划；每种方法恰好 40 条，检索键与调用键均唯一。
+- 配置强制 `execute_retrieval=false`、`execute_model_calls=false`；本步骤不执行检索、不构建最终证据上下文，也不调用模型。
+- 产物未出现 Gold-only 字段，Pilot Test 80 执行前后 SHA-256 均为 `14afa2988d9ff579471f2d082f9803ce3bfc9e030eb439e7cf2d4c6fa55d5da9`。
+- 输出采用 immutable preflight，同内容可幂等复跑，字节冲突时整体 fail closed。
+- 定向测试 `10 passed`，Phase 7 全量回归 `244 passed`，后端与 Phase 7 联合回归 `316 passed`；外部模型调用、input/output tokens 和估算费用均为 0。
+
+主要本地产物：
+
+- `revision/phase7/validation40_preflight/validation40_retrieval_plan_v0_1.jsonl`
+- `revision/phase7/validation40_preflight/validation40_method_call_plan_v0_1.jsonl`
+- `revision/phase7/validation40_preflight/validation40_experiment_preflight_audit_v0_1.json`
+- `revision/phase7/validation40_preflight/validation40_experiment_preflight_summary_v0_1.md`
+
+下一步 Phase 7-C1c 只执行和缓存 Validation40 的离线检索结果，继续禁止读取 Pilot Test 80 和调用外部生成模型。完成证据上下文审计后，真实模型调用必须另设批准门禁。
