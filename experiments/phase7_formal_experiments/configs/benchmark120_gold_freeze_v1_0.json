@@ -1,0 +1,27 @@
+{
+  "config_version": "benchmark120-gold-freeze-config-v1.0",
+  "gold_version": "benchmark-v1.0-guideline-grounded-author-adjudicated",
+  "freeze_version": "benchmark-v1.0-freeze-v1.0",
+  "kb_version": "KB-medium-v1",
+  "protocol_version": "benchmark-protocol-v0.1",
+  "expected_selection_count": 120,
+  "expected_adjudication_count": 31,
+  "expected_split_counts": {
+    "validation": 40,
+    "pilot_test": 80
+  },
+  "expected_input_sha256": {
+    "selection": "96611f2482ced31c5730a7d085e42dbf01e9955abae9ec9b4cf7e89dba4118cc",
+    "split": "c4ab7a199e362078aeb31e4a2ab3a14d3b2067b52d089901998c33dd713d4b39",
+    "adjudication": "9471dff8afb1a6f1c9e4f03e7677d28b429dc3788192bd78f9a444e16c33865f",
+    "adjudication_audit": "f7a32d11a9cb6f2fb9d143e2335bcbab9639cab2e7800df850f1fb751b285de2"
+  },
+  "input_paths": {
+    "selection": "revision/benchmark/benchmark_v1/benchmark120_selection_draft_v0_1.jsonl",
+    "split": "revision/benchmark/benchmark_v1/benchmark120_split_proposal_v0_1.json",
+    "adjudication": "revision/benchmark/benchmark_v1/benchmark120_disagreement_adjudication_final_v0_1.csv",
+    "adjudication_audit": "revision/benchmark/benchmark_v1/benchmark120_disagreement_adjudication_audit_v0_1.json"
+  },
+  "output_dir": "revision/benchmark/benchmark_v1",
+  "external_model_calls": 0
+}

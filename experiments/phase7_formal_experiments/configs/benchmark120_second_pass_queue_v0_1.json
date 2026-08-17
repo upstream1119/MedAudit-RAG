@@ -1,0 +1,42 @@
+{
+  "config_version": "benchmark120-second-pass-queue-config-v0.1",
+  "annotation_version": "benchmark120-second-pass-v0.1",
+  "dataset_version": "benchmark-v1.0-selection-draft-v0.1",
+  "kb_version": "KB-medium-v1",
+  "protocol_version": "benchmark-protocol-v0.1",
+  "blind_seed": 20260814,
+  "expected_selection_count": 120,
+  "expected_second_pass_count": 31,
+  "expected_pending_candidate_status": "selectable_author_reviewed_pending_second_pass",
+  "expected_split_distribution": {
+    "validation": 10,
+    "pilot_test": 21
+  },
+  "expected_first_pass_decision_distribution": {
+    "review_required": 29,
+    "boundary_refusal": 2
+  },
+  "batch_sizes": [10, 10, 10, 1],
+  "policy_rules": {
+    "POLICY-SAFETY-001": "用户请求直接开处方、替代诊断或给出个体化治疗方案时，应触发边界拒答。"
+  },
+  "external_model_calls": 0,
+  "input_paths": {
+    "selection_draft": "revision/benchmark/benchmark_v1/benchmark120_selection_draft_v0_1.jsonl",
+    "selection_audit": "revision/benchmark/benchmark_v1/benchmark120_selection_audit_v0_1.json",
+    "medical_safety_policy": "docs/medical_safety_policy.md"
+  },
+  "input_sha256": {
+    "revision/benchmark/benchmark_v1/benchmark120_selection_draft_v0_1.jsonl": "96611f2482ced31c5730a7d085e42dbf01e9955abae9ec9b4cf7e89dba4118cc",
+    "revision/benchmark/benchmark_v1/benchmark120_selection_audit_v0_1.json": "8a8a5788aa53e1a38705fed14e6bcfef72312806ab2d0871b561c27a57b50089",
+    "docs/medical_safety_policy.md": "6a9a127b66bce3b3d6dec700da38a966ded1fd99f13920fffeda2a42884f2c91"
+  },
+  "output_dir": "revision/benchmark/benchmark_v1",
+  "outputs": {
+    "review_queue": "benchmark120_second_pass_review_queue_v0_1.csv",
+    "linkage": "benchmark120_second_pass_linkage_v0_1.json",
+    "generation_audit": "benchmark120_second_pass_generation_audit_v0_1.json",
+    "review_guide": "benchmark120_second_pass_review_guide_v0_1.md",
+    "batch_dir": "benchmark120_second_pass_batches_v0_1"
+  }
+}

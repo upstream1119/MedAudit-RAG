@@ -1,0 +1,61 @@
+{
+  "config_version": "benchmark-anchor-supplement-reviewed-pool-config-v0.2",
+  "dataset_version": "benchmark-v1.0-anchor-supplement-reviewed-candidate-v0.2",
+  "kb_version": "KB-medium-v1",
+  "expected_review_count": 46,
+  "expected_accepted_count": 44,
+  "expected_rejected_count": 2,
+  "expected_decision_distribution": {
+    "review_required": 34,
+    "boundary_refusal": 10
+  },
+  "allowed_author_outcomes": [
+    "accepted",
+    "rejected"
+  ],
+  "allowed_final_decisions": [
+    "review_required",
+    "boundary_refusal"
+  ],
+  "ngram_size": 3,
+  "jaccard_threshold": 0.65,
+  "review_csv_path": "revision/benchmark/benchmark_v1/benchmark_anchor_supplement_author_review_final_v0_2.csv",
+  "review_audit_path": "revision/benchmark/benchmark_v1/benchmark_anchor_supplement_author_review_audit_v0_2.json",
+  "review_summary_path": "revision/benchmark/benchmark_v1/benchmark_anchor_supplement_author_review_summary_v0_2.md",
+  "candidate_path": "revision/benchmark/benchmark_v1/benchmark_anchor_supplement_candidates_v0_2.jsonl",
+  "dev50_path": "revision/benchmark/dev50/dev50_v1_0_frozen.jsonl",
+  "existing_candidate_paths": [
+    "revision/benchmark/benchmark_v1/benchmark_candidates_v0_2_deduplicated.jsonl",
+    "revision/benchmark/benchmark_v1/benchmark_supplement_candidates_v0_1.jsonl"
+  ],
+  "frozen15_sample_ids": [
+    "PMSQA_DEV_001",
+    "PMSQA_DEV_002",
+    "PMSQA_DEV_003",
+    "PMSQA_DEV_005",
+    "PMSQA_DEV_006",
+    "PMSQA_DEV_007",
+    "PMSQA_DEV_011",
+    "PMSQA_DEV_014",
+    "PMSQA_DEV_019",
+    "PMSQA_DEV_024",
+    "PMSQA_DEV_035",
+    "PMSQA_DEV_039",
+    "PMSQA_DEV_042",
+    "PMSQA_DEV_043",
+    "PMSQA_DEV_047"
+  ],
+  "input_sha256": {
+    "revision/benchmark/benchmark_v1/benchmark_anchor_supplement_author_review_final_v0_2.csv": "ce2c7443e258af2ab53aab9bcb27707f494d6d567567d241b1d7aa60933180b0",
+    "revision/benchmark/benchmark_v1/benchmark_anchor_supplement_author_review_audit_v0_2.json": "8b2feb4b59ae4b1f2070649edef88b8b6ea6f6226bd425da3e90b6ac5bc20f22",
+    "revision/benchmark/benchmark_v1/benchmark_anchor_supplement_author_review_summary_v0_2.md": "7561d1e5066ba55830231d27ccb426e8527ede1b2746f9bab314a172888d0f22",
+    "revision/benchmark/benchmark_v1/benchmark_anchor_supplement_candidates_v0_2.jsonl": "4083e6c41efbc9dd9ace72b73a783bde6c930310dec0d8e1a0afc767ec26d678",
+    "revision/benchmark/dev50/dev50_v1_0_frozen.jsonl": "54eb5c86fd65faf75800d16c2430aa684190e2712bfd91c2f172fc3d4de5bc0a",
+    "revision/benchmark/benchmark_v1/benchmark_candidates_v0_2_deduplicated.jsonl": "4741ee2dca56611b896b9f61fb53080416a352acf643317fb82f574213628611",
+    "revision/benchmark/benchmark_v1/benchmark_supplement_candidates_v0_1.jsonl": "55f0fd69a110389adbb51f382315001ea99898ab75db7c2336d490c1b2596fa6"
+  },
+  "output_dir": "revision/benchmark/benchmark_v1",
+  "candidate_output": "benchmark_anchor_supplement_reviewed_pool_v0_2.jsonl",
+  "audit_output": "benchmark_anchor_supplement_reviewed_pool_audit_v0_2.json",
+  "summary_output": "benchmark_anchor_supplement_reviewed_pool_summary_v0_2.md"
+}

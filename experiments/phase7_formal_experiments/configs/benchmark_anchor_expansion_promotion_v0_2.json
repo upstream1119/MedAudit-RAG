@@ -1,0 +1,20 @@
+{
+  "config_version": "benchmark-anchor-expansion-promotion-config-v0.2",
+  "promotion_version": "benchmark-anchor-expansion-promotion-v0.2",
+  "dataset_version": "benchmark-v1.0-pre-freeze",
+  "kb_version": "KB-medium-v1",
+  "expected_review_count": 58,
+  "expected_accepted_count": 46,
+  "expected_rejected_count": 12,
+  "expected_existing_anchor_count": 72,
+  "expected_expansion_anchor_count": 46,
+  "expected_merged_anchor_count": 118,
+  "expected_parent_queue_sha256": "423198aefbb6110fb988f14317493c4c7a55802e1f50c7231947e26224bd9b1b",
+  "expected_author_review_sha256": "6660ed0a13994cee2b88f2355ab7cbd514c7d3aa73aa65c55c83c30936bf0a33",
+  "expected_author_audit_sha256": "fe6fb3ad461988373d04e0aa458beb3e6f6b01b2d4f37edf6640ca5988371cb2",
+  "expected_coverage_sha256": "3ffb4f93b825d173d39c634d95e059fd0623436ff309e5b0d260f52b84eb98c0",
+  "expected_existing_pool_sha256": "82b7a089da6bee99278796f1152c51958ec46e947e6ea022de0c889359b39dc4",
+  "expected_dev50_registry_sha256": "b3063c7b7be7c877e614d8cf20a26a1a69f68c8d4ae9ef665eed8d851171d80d",
+  "min_verified_text_chars": 40,
+  "required_scope_check": "within_can_support"
+}

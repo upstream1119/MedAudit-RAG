@@ -1,0 +1,79 @@
+{
+  "config_version": "benchmark120-second-pass-resolution-config-v0.1",
+  "resolution_version": "benchmark120-second-pass-resolution-v0.1",
+  "dataset_version": "benchmark-v1.0-selection-draft-v0.1",
+  "kb_version": "KB-medium-v1",
+  "protocol_version": "benchmark-protocol-v0.1",
+  "expected_selection_count": 120,
+  "expected_second_pass_count": 31,
+  "expected_resolution_count": 31,
+  "expected_full_agreement_count": 0,
+  "expected_disagreement_field_distribution": {
+    "allowed_claims": 31,
+    "current_kb_support": 29,
+    "expected_decision": 29,
+    "forbidden_claims": 31,
+    "gold_evidence_status": 2,
+    "missing_evidence_type": 4,
+    "missing_information": 4,
+    "required_claims": 31,
+    "required_evidence_type": 31,
+    "risk_labels": 31
+  },
+  "expected_pass1_decision_distribution": {
+    "boundary_refusal": 2,
+    "review_required": 29
+  },
+  "expected_pass2_decision_distribution": {
+    "answer": 29,
+    "boundary_refusal": 2
+  },
+  "expected_decision_transition_distribution": {
+    "boundary_refusal->boundary_refusal": 2,
+    "review_required->answer": 29
+  },
+  "expected_support_transition_distribution": {
+    "partial_current_kb_support->supported_by_current_kb": 29,
+    "policy_rule->policy_rule": 2
+  },
+  "expected_evidence_transition_distribution": {
+    "page_span_located->page_span_located": 29,
+    "page_span_located->policy_rule": 2
+  },
+  "allowed_decisions": [
+    "answer",
+    "review_required",
+    "insufficient_evidence",
+    "boundary_refusal"
+  ],
+  "allowed_kb_support": [
+    "supported_by_current_kb",
+    "partial_current_kb_support",
+    "not_supported_by_current_kb",
+    "policy_rule"
+  ],
+  "allowed_gold_evidence_status": [
+    "page_span_located",
+    "policy_rule"
+  ],
+  "external_model_calls": 0,
+  "input_paths": {
+    "selection_draft": "revision/benchmark/benchmark_v1/benchmark120_selection_draft_v0_1.jsonl",
+    "linkage": "revision/benchmark/benchmark_v1/benchmark120_second_pass_linkage_v0_1.json",
+    "pass2_queue": "revision/benchmark/benchmark_v1/benchmark120_second_pass_review_queue_v0_1.csv",
+    "progress": "revision/benchmark/benchmark_v1/benchmark120_second_pass_progress_v0_1.json"
+  },
+  "input_sha256": {
+    "revision/benchmark/benchmark_v1/benchmark120_selection_draft_v0_1.jsonl": "96611f2482ced31c5730a7d085e42dbf01e9955abae9ec9b4cf7e89dba4118cc",
+    "revision/benchmark/benchmark_v1/benchmark120_second_pass_linkage_v0_1.json": "45f47615714fd69d735d67bc65691ee28007c8d4ebfd311d44fff3a7ee2afd5e",
+    "revision/benchmark/benchmark_v1/benchmark120_second_pass_review_queue_v0_1.csv": "9a1845330d852cca24f4b7a178698418e335529474329dffd2fb3410f933fefa",
+    "revision/benchmark/benchmark_v1/benchmark120_second_pass_progress_v0_1.json": "ad23cbaac031239166754b4a20042dd08d82553c5a7df874912c4868627f458a"
+  },
+  "output_dir": "revision/benchmark/benchmark_v1",
+  "outputs": {
+    "linked_comparison": "benchmark120_second_pass_linked_comparison_v0_1.jsonl",
+    "resolution_queue": "benchmark120_second_pass_resolution_queue_v0_1.csv",
+    "summary": "benchmark120_second_pass_resolution_summary_v0_1.json",
+    "resolution_guide": "benchmark120_second_pass_resolution_guide_v0_1.md"
+  }
+}

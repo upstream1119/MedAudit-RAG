@@ -4,7 +4,7 @@
 
 MedAudit-RAG 是一个面向儿科用药问答的证据链审计 RAG 研究原型，用于检查模型回答是否受到指南、共识、药品说明书、目录等已准入权威资料的证据支持。
 
-它不是临床诊断系统，不生成真实处方，也不能替代医生。当前仓库已包含 vector RAG + TrustScore baseline，以及开发阶段的 Graph-enhanced evidence auditing 方法原型；其经验效果仍需在冻结评测集上正式验证。
+它不是临床诊断系统，不生成真实处方，也不能替代医生。当前仓库已包含 vector RAG + TrustScore baseline、开发阶段的 Graph-enhanced evidence auditing 方法原型，以及用于正式评测的 guideline-grounded 冻结基准；方法的经验效果尚未建立。
 
 ## 核心能力
 
@@ -185,6 +185,6 @@ POST /api/audit/query/stream
 
 - 提升检索稳定性和 source/page 精度。
 - 扩展并审计儿科用药权威知识库。
-- 构建并冻结 guideline-grounded benchmark split。
+- 在已冻结的 guideline-grounded benchmark split 上执行可复现方法对比。
 - 对比 vanilla LLM、naive RAG、multi-granularity RAG、TrustScore Gate 和 graph-enhanced evidence auditing。
 - 保存 raw outputs、失败样本、置信区间和统计检验结果，为论文写作提供可审计证据。

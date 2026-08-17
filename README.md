@@ -6,7 +6,7 @@ Rule-aware evidence auditing RAG system for safer pediatric medication question 
 
 MedAudit-RAG is a research prototype for auditing whether pediatric medication answers are supported by traceable evidence from guidelines, consensus documents, drug labels, catalogs, and other admitted authoritative sources. It is not a clinical diagnosis system, prescription generator, or replacement for licensed clinicians.
 
-The current repository contains a vector RAG + TrustScore baseline and a development-stage graph-enhanced evidence-auditing prototype. Its empirical effects have not yet been established and require formal evaluation on a frozen benchmark.
+The current repository contains a vector RAG + TrustScore baseline, a development-stage graph-enhanced evidence-auditing prototype, and a frozen guideline-grounded benchmark for formal evaluation. Empirical method effects have not yet been established.
 
 ## Core Capabilities
 
@@ -187,6 +187,6 @@ This repository is an active research prototype. Detailed phase status, task tra
 
 - Improve retrieval reliability and source/page precision.
 - Expand and audit the authoritative pediatric medication knowledge base.
-- Build and freeze guideline-grounded benchmark splits.
+- Run reproducible method comparisons on frozen guideline-grounded benchmark splits.
 - Compare vanilla LLM, naive RAG, multi-granularity RAG, TrustScore Gate, and graph-enhanced evidence auditing.
 - Preserve raw outputs, failure cases, confidence intervals, and statistical tests for manuscript writing.

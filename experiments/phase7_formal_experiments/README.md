@@ -540,3 +540,225 @@ D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_expe
 - 定向测试为 `6 passed`；标准 `PYTHONPATH=backend` 下后端/Phase 6/Phase 7 完整回归为 `320 passed`。
 - 本步骤未调用外部模型/API，`external_api_calls=0`、`input_tokens=0`、`output_tokens=0`、`estimated_cost=0`。
 - 这些输出只是 AI 辅助核验草稿，不是作者确认、Gold evidence、独立专家验证、临床验证或 Graph-enhanced 方法效果证据。
+
+## Phase 7-B3.6c 第二批锚点作者核验门禁（2026-08-10）
+
+生成 6 个作者核验批次：
+
+```powershell
+$env:PYTHONPATH='.;backend'
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\benchmark_anchor_expansion_author_review.py --mode prepare
+```
+
+逐批填写作者字段后，可先校验单个批次：
+
+```powershell
+$env:PYTHONPATH='.;backend'
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\benchmark_anchor_expansion_author_review.py --mode validate-batch --review-batch revision\benchmark\benchmark_v1\anchor_expansion_author_review_batches_v0_2\batch_01.csv
+```
+
+只有 58 条均完成显式作者核验后，才允许执行汇总：
+
+```powershell
+$env:PYTHONPATH='.;backend'
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\benchmark_anchor_expansion_author_review.py --mode finalize
+```
+
+- 配置锁定父队列和 AI 草稿 SHA-256，任一来源、页码、原文或草稿字段漂移都会 fail closed。
+- `prepare` 生成 `10/10/10/10/10/8` 六批工作包，所有作者字段保持为空；再次运行不会覆盖已经填写作者结论的批次。
+- `accepted` 必须提供可追溯的证据跨度、非空 claim type、适用人群、适用条件和 `within_can_support` 范围判断；`rejected` 必须写明理由。
+- 未覆盖全部 58 条、存在重复候选或任一批次字段不完整时，`finalize` 不会生成作者核验汇总。
+- 本步骤只完成作者核验门禁，不执行 evidence anchor 晋升；也不得表述为独立专家验证、临床验证或 Graph-enhanced 方法效果。
+
+## Phase 7-B3.6d 第二批证据锚点独立晋升门禁（2026-08-11）
+
+先执行只读校验，不写正式产物：
+
+```powershell
+$env:PYTHONPATH='.;backend'
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\benchmark_anchor_expansion_promotion.py --mode validate
+```
+
+校验通过后执行原子晋升：
+
+```powershell
+$env:PYTHONPATH='.;backend'
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\benchmark_anchor_expansion_promotion.py --mode promote
+```
+
+- 配置锁定候选队列、作者核验结果、作者核验审计、来源覆盖矩阵、旧锚点池和 Dev50 注册表的 SHA-256；父资产漂移时 fail closed。
+- 晋升时重新检查正式 PDF 的来源、标题、文件名、SHA-256、页码、证据跨度、适用范围、作者核验元数据和 claim type。
+- 58 条作者核验记录中仅 46 条 `accepted` 被晋升，12 条 `rejected` 被排除并保留在决策审计中。
+- 新增锚点为 46 条，合并锚点池为 118 条，即旧池 72 条加新增 46 条；旧 v0.1 文件及其 SHA-256 保持不变。
+- 新增锚点与旧池、Dev50 的 `source_id + page_number` 重叠均为 0；合并池 schema 一致，无重复 ID 或重复来源页。
+- 主要产物：`evidence_anchor_expansion_v0_2.jsonl`、`evidence_anchor_pool_v0_2.jsonl`、`anchor_expansion_promotion_decisions_v0_2.csv`、`anchor_expansion_promotion_audit_v0_2.json` 和 `anchor_expansion_promotion_summary_v0_2.md`。
+- 关键 SHA-256：新增锚点 `bf5d22d48ebf7f2a182e958deef7d98831821cd1c1cbefc1fbee41d386293c7d`，合并池 `a11b9e552e3b0de126f5a8cfdc20dc508e4355a1a4e8dcb1301ac984a01d8fa5`，决策审计 `462efc1ada3169b442dbe320e6dd3ab161e7bb59c16066c8bb470ba2e0ff9494`。
+- 确定性重跑后五个产物的文件哈希一致。定向测试 `8 passed`，Phase 7 回归 `170 passed`，完整回归 `334 passed`。
+- 本步骤没有调用外部模型/API，`external_api_calls=0`、`input_tokens=0`、`output_tokens=0`、`estimated_cost=0`。
+- 118 条记录是单一作者核验、公开资料可追溯的 evidence anchors，不是冻结 Benchmark-v1 的最终 gold labels、独立专家验证、临床验证或 Graph-enhanced 方法效果证据。
+
+## Phase 7-B3.6e 非 `answer` 补充问题候选构建（2026-08-11）
+
+运行候选构建与独立性审计：
+
+```powershell
+$env:PYTHONPATH='.;backend'
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\benchmark_anchor_supplement_candidates.py --config experiments\phase7_formal_experiments\configs\benchmark_anchor_supplement_candidates_v0_2.json
+```
+
+- 输入锁定 B3.6d 新增的 46 条独立 evidence anchors，并为每个锚点构建 1 条补充问题候选；候选总数为 46，独立单元数为 46，覆盖 19 个正式来源。
+- 临时候选分布为 `review_required=36`、`boundary_refusal=10`，用于补足已核验候选池中非 `answer` 场景不足；这些标签仍是 `provisional_expected_decision`，不是最终 `expected_decision`。
+- 10 条处方边界候选均绑定 `POLICY-SAFETY-001`；全部候选保持 `annotation_status=pending_author_review`、`freeze_status=draft`，没有写入最终 `forbidden_claims`。
+- 与 Dev50、Frozen15、既有候选、候选内部和既有 `source_id + page_number` 的重叠均为 0；无效页码和未解决审计项均为 0。
+- 候选 JSONL SHA-256 为 `4083e6c41efbc9dd9ace72b73a783bde6c930310dec0d8e1a0afc767ec26d678`；作者审核队列为 `2e25f89295cad29f725636ea08d591a9c239e0475fbbc03c0eee47e01381321d`；审计 JSON 为 `663c7f4968bf34e59af63faba59caf760bfc08542b3f2f2c074fb8ea62315ae3`；摘要为 `9ec4a6d36ee07e2fd66a857180eb7fcbdf8bccff971e7f2af34d4bacadb0079c`。
+- 确定性重跑后四个产物哈希全部一致。定向测试 `6 passed`、Phase 7 回归 `176 passed`、后端/Phase 6/Phase 7 联合回归 `340 passed`。
+- 本步骤未调用外部模型/API，`external_model_calls=0`、`input_tokens=0`、`output_tokens=0`、`estimated_cost=0`。
+- 下一步必须逐条完成作者审核，确认问题表述、证据范围、最终决策、风险标签和禁止主张；审核完成前不得合并到最终候选池、选择 120 题或冻结 Benchmark-v1。
+
+## Phase 7-B3.6f 补充候选作者审核门禁（2026-08-11）
+
+生成五批作者审核工作包：
+
+```powershell
+$env:PYTHONPATH='.;backend'
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\benchmark_anchor_supplement_author_review.py --mode prepare
+```
+
+逐批填写作者字段后校验，例如：
+
+```powershell
+$env:PYTHONPATH='.;backend'
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\benchmark_anchor_supplement_author_review.py --mode validate-batch --batch-file revision\benchmark\benchmark_v1\supplement_author_review_batches_v0_2\batch_01.csv
+```
+
+仅当五批全部通过校验后才能收口：
+
+```powershell
+$env:PYTHONPATH='.;backend'
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\benchmark_anchor_supplement_author_review.py --mode finalize --batch-dir revision\benchmark\benchmark_v1\supplement_author_review_batches_v0_2
+```
+
+- 配置固定锁定 B3.6e 的候选 JSONL、审核队列、独立性审计和摘要四个父资产 SHA-256；任一输入漂移都会 fail closed。
+- 46 条候选按 `10/10/10/10/6` 拆分为五批，覆盖 46 个唯一候选和 19 个正式来源；工作包包含原问题、证据跨度、临时决策、风险标签、策略规则、来源文件及哈希等审核上下文。
+- 作者接受候选时必须同时填写最终问题、最终决策、风险标签、允许回答范围、禁止主张、理由、审核人和时间；`revision_required` 与 `rejected` 不能携带可直接晋升的完整字段。
+- 历史门禁快照：工作包初始生成时五批作者字段均为空、审核进度为 `0/46`；空白批次执行 `validate-batch`、五批空白执行 `finalize` 均按预期失败。
+- 当前状态：五批已完成 `46/46` 条作者审核并通过 `10/10/10/10/6` 官方校验；B3.6g 已执行 `finalize`，正式结果为 `accepted=44`、`rejected=2`，接收项决策为 `review_required=34`、`boundary_refusal=10`。
+- 正式作者审核 CSV 保留全部 46 条审计轨迹；两条 rejected 的可晋升字段均为空。CSV、审计 JSON 和摘要 Markdown 的 SHA-256 分别为 `ce2c7443e258af2ab53aab9bcb27707f494d6d567567d241b1d7aa60933180b0`、`8b2feb4b59ae4b1f2070649edef88b8b6ea6f6226bd425da3e90b6ac5bc20f22`、`7561d1e5066ba55830231d27ccb426e8527ede1b2746f9bab314a172888d0f22`；确定性重跑保持一致。
+- 定向测试 `9 passed`、Phase 7 回归 `185 passed`、后端/Phase 6/Phase 7 联合回归 `349 passed`。受限沙箱中的 `_ctypes` DLL 加载失败属于收集权限问题，同一命令脱离受限沙箱后全部通过。
+- 本步骤没有调用外部模型/API，`external_model_calls=0`、`input_tokens=0`、`output_tokens=0`、`estimated_cost=0`。
+- B3.6g 只完成作者审核结果收口，审计明确记录 `candidate_merge_performed=false`、`gold_promotion_performed=false`、`freeze_performed=false`；不能将 `finalize` 等同于 Gold 晋升或 Benchmark 冻结。
+
+## Phase 7-B3.6h：已审核补充候选池构建与再审计
+
+```powershell
+$env:PYTHONPATH='.;backend'
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\benchmark_anchor_supplement_reviewed_pool.py --config experiments\phase7_formal_experiments\configs\benchmark_anchor_supplement_reviewed_pool_v0_2.json
+```
+
+- 固定锁定 B3.6g 正式作者审核 CSV、审核审计、审核摘要，以及 B3.6e 原始候选、既有候选池和 Dev50 的 SHA-256；任一父资产漂移都会 fail closed。
+- 正式候选池仅纳入 44 条 `accepted`，明确排除 2 条 `rejected`；通过 `candidate_id` 一一关联被锁定的原始候选，恢复事实簇、独立单元和来源页字段。
+- 44 条记录对应 44 个唯一候选 ID、44 个唯一事实簇、44 个唯一 `independence_unit_id` 和 44 个唯一来源页；最终决策分布为 `review_required=34`、`boundary_refusal=10`。
+- 最终问题与 Dev50、既有候选和本池内部的精确/近重复均为 0；来源页复用、事实簇复用和 rejected 泄漏均为 0，未解决重叠为 0。
+- 正式候选 JSONL、审计 JSON 和摘要 Markdown 的 SHA-256 分别为 `09266a42377557fba647079d95f1103706b8407c9008cf09fe07ebc7b71d9c6d`、`b9ae0c94c4124d834693ad98ab145b7cfe870bff209f5e1e9ab6fcb09199c1ee`、`e945e1a741c7ae37b7aa0a89aec52646b6eb793393e7a132397feb184a3e0d83`；确定性重跑保持一致。
+- 定向测试 `9 passed`、Phase 7 回归 `194 passed`、后端/Phase 6/Phase 7 联合回归 `358 passed`。受限沙箱中的 `_ctypes` DLL 加载失败属于收集权限问题，同一命令脱离受限沙箱后全部通过。
+- 本步骤没有调用外部模型/API，`external_model_calls=0`、`input_tokens=0`、`output_tokens=0`、`estimated_cost=0`。
+- 当前仍为 `author_reviewed_candidate` 草稿池：`benchmark_merge_performed=false`、`gold_promotion_performed=false`、`freeze_performed=false`。下一步 B3.6i 才进行 Benchmark-120 选择和按独立单元分组的切分设计。
+
+## Phase 7-B3.6i：Benchmark-120 选择与分层草案（2026-08-14）
+
+运行固定配置的选择与分层工具：
+
+```powershell
+$env:PYTHONIOENCODING='utf-8'
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\benchmark120_selection.py --config experiments\phase7_formal_experiments\configs\benchmark120_selection_v0_1.json --repo-root .
+```
+
+- 选择器锁定 8 类输入资产 SHA-256，任一父资产漂移都会 fail closed；不调用外部模型或 API。
+- 可选池共 146 条：102 条来自旧池两轮一致记录，44 条来自 B3.6h 单轮作者终审池。另隔离 36 条，其中 34 条裁决理由文本损坏、1 条两轮结论不一致、1 条第二轮未接受。
+- 确定性选择 120 条，决策分布为 `answer=40`、`review_required=40`、`insufficient_evidence=24`、`boundary_refusal=16`；其中 89 条为两轮一致，31 条为单轮作者终审且待同一作者、与第一轮逐条结论隔离的第二轮盲化复核。
+- 分层草案为 Validation 40 / Pilot Test 80。Validation 分布为 `13/13/8/6`，Pilot Test 分布为 `27/27/16/10`；对应两轮一致/单轮待二审分别为 `30/10` 与 `59/21`。
+- 跨分层事实簇、证据锚点、独立单元、来源页和中文 3-gram 近重复泄漏均为 0；与 Dev50 的问题重叠为 0。
+- 五个正式产物确定性复跑 SHA-256 完全一致。定向测试 `8 passed`、Phase 7 回归 `202 passed`、后端/Phase 6/Phase 7 联合回归 `366 passed`。
+- 外部模型调用、input/output tokens 与估算费用均为 0。当前状态为 `draft_selection_ready_for_second_pass`，并明确记录 `gold_promotion_performed=false`、`freeze_performed=false`。
+
+主要产物：
+
+- `revision/benchmark/benchmark_v1/benchmark_selectable_pool_v0_1.jsonl`
+- `revision/benchmark/benchmark_v1/benchmark120_selection_draft_v0_1.jsonl`
+- `revision/benchmark/benchmark_v1/benchmark120_split_proposal_v0_1.json`
+- `revision/benchmark/benchmark_v1/benchmark120_selection_audit_v0_1.json`
+- `revision/benchmark/benchmark_v1/benchmark120_selection_summary_v0_1.md`
+
+下一步 B3.6j 只对选中的 31 条单轮样本执行同一作者、与第一轮逐条结论隔离的第二轮盲化复核。第二轮分歧解决、Gold promotion gate 和正式冻结必须继续分步执行；当前 40/80 仅是可审计切分草案。
+
+## Phase 7-B3.6j-a：Benchmark-120 第二轮盲化复核队列准备（2026-08-14）
+
+```powershell
+$env:PYTHONIOENCODING='utf-8'
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\benchmark120_second_pass_queue.py --config experiments\phase7_formal_experiments\configs\benchmark120_second_pass_queue_v0_1.json --repo-root .
+```
+
+- 锁定 Benchmark-120 选择草案、选择审计和医疗安全策略三项父资产 SHA-256；任一父资产漂移都会 fail closed。
+- 从 120 条草案中仅抽取 31 条 `requires_second_pass=true` 记录，形成 Validation 10 / Pilot Test 21 的盲化复核队列，并确定性拆分为 `10/10/10/1` 四个空白批次模板。
+- reviewer-visible 队列只暴露问题、来源、页码、证据跨度或安全策略证据，以及空白 Pass 2 字段；`candidate_id`、split、第一轮决策、支持范围、风险标签、禁止主张和其他作者派生字段均不进入可见队列。
+- 私有 linkage 仅用于复核完成后的关联与分歧识别；31 个 blind ID 与 31 条第一轮记录一一对应，可见字段泄漏为 0，31 条 Pass 2 复核字段全部为空。
+- 复核模式是 `same-author row-level first-pass-label-blinded second review`。它不是独立专家复核、临床验证或独立标注者一致性研究。
+- 队列、linkage、指南及四批模板均通过确定性复跑审计。生成审计 SHA-256 为 `10873d75e8f54586a0eca6602814459bc6d279178496db52a0bca3f440c5fdb9`。
+- 新增定向测试 `7 passed`；相关选择/队列回归 `21 passed`；Phase 7 全量回归 `209 passed`；后端与 Phase 7 联合回归在脱离受限沙箱后为 `281 passed`。受限沙箱中的 `_ctypes` DLL 加载失败属于环境权限问题，不是代码回归。
+- 本步骤没有调用外部模型/API，`external_model_calls=0`、`input_tokens=0`、`output_tokens=0`、`estimated_cost=0`。
+- 当前状态为 `second_pass_queue_ready_review_pending`：只完成队列准备，31 条实际复核、两轮关联、真实分歧裁决、Gold 晋升和正式冻结均未执行。
+
+## Phase 7-B3.6j-b：Benchmark-120 第二轮复核 Batch 01（2026-08-15）
+
+- 作者 `PYH` 仅依据 reviewer-visible 工作包完成 Batch 01 的 10 条复核；10 条均为 `accepted`，其中 `answer=9`、`boundary_refusal=1`，原问题均未改写。
+- 对“待审回答能否通过”的证据审计题，若当前证据可直接确认错误外推、适用范围错配、关键禁忌遗漏或不受支持的具体化，则允许形成受限的否定审计结论，记为 `answer`；个体化完整处方请求单独按 `POLICY-SAFETY-001` 记为 `boundary_refusal`。
+- 标注器原子写回后的进度为 `completed=10`、`pending=21`、`status=in_progress`；队列 SHA-256 为 `acd2fe8a8ea2f3c138f1dfacb0df8c08c63769bdddd16241c0e99634d792054b`。
+- 空白 Batch 01 模板 SHA-256 仍为 `52c08318030c1d57a1adc6c383ccfba6e5cb8e9fe62c78fb7034ea893b475f36`，后 21 条 Pass 2 字段保持为空，私有 linkage 未读取。
+- 本轮是 AI 辅助草案与同一作者确认，不是独立专家、独立标注者或临床验证；辅助检索过程也不宣称完全盲态。
+- 定向测试为 `11 passed`；使用既定 `PYTHONPATH=backend` 后，Phase 7 全量回归为 `209 passed`。
+- 本批没有调用外部模型/API，`external_model_calls=0`、`input_tokens=0`、`output_tokens=0`、`estimated_cost=0`。
+
+## Phase 7-B3.6j-b：Benchmark-120 第二轮复核收口（2026-08-16）
+
+- Batch 02、03、04 分别完成 `10/10/1` 条作者复核；四批累计 `31/31`，结果为 `accepted=31`、`answer=29`、`boundary_refusal=2`，所有 accepted 记录均保留原问题。
+- 两条 `boundary_refusal` 均绑定版本化安全策略 `POLICY-SAFETY-001`；其余 29 条只允许在已定位 source/page/span 的范围内形成受限审计结论。
+- 最终队列状态为 `complete`，SHA-256 为 `9a1845330d852cca24f4b7a178698418e335529474329dffd2fb3410f933fefa`；进度 JSON SHA-256 为 `ad23cbaac031239166754b4a20042dd08d82553c5a7df874912c4868627f458a`。
+- 独立结构审计确认 31 个 blind ID 唯一、必填字段和列表字段合法、问题文本未被静默改写、边界策略绑定正确、模板哈希未变化且无乱码。
+- 定向测试 `4 passed`，Phase 7 全量回归 `209 passed`。本阶段外部模型/API 调用、input/output tokens 与估算费用均为 0。
+- B3.6j-b 仍属于同一作者的第二轮复核，不是独立专家或临床验证。私有 linkage 在本步骤中未读取，Gold promotion 与 Validation/Pilot Test 冻结均未执行；下一步是 B3.6j-c 的两轮关联与真实分歧识别。
+
+## Phase 7-B3.6j-c：Benchmark-120 双轮关联与真实分歧队列（2026-08-16）
+
+```powershell
+$env:PYTHONIOENCODING='utf-8'
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\benchmark120_second_pass_resolution.py --config experiments\phase7_formal_experiments\configs\benchmark120_second_pass_resolution_v0_1.json
+```
+
+- 配置固定锁定 120 条选择草案、31 条私有 linkage、第二轮最终队列和完成进度的 SHA-256；任一父资产漂移都会 fail closed。
+- 关联器重新计算每条 `selection_row_sha256`，并核对 blind ID、candidate ID、问题、来源、页码、版本和第一轮字段，避免直接信任私有映射。
+- 10 个比较字段包括 decision、KB support、evidence status、required evidence、required/allowed/forbidden claims、missing evidence/information 和 risk labels；数组字段按顺序无关的规范形式比较，但在产物中保留原始双轮文本。
+- 真实结果为 linked 31、完全一致 0、待裁决 31。29 条从 `review_required` 转为 `answer`，2 条维持 `boundary_refusal`；不得自动采用第二轮结果。
+- 主要产物为 `benchmark120_second_pass_linked_comparison_v0_1.jsonl`、`benchmark120_second_pass_resolution_queue_v0_1.csv`、`benchmark120_second_pass_resolution_summary_v0_1.json` 和 `benchmark120_second_pass_resolution_guide_v0_1.md`。
+- 待裁决队列 SHA-256 为 `5d10786a259b5a71ecb4da85c5092bdfba0c6bc09c469ee14def31213c90487a`；31 条记录全部存在真实分歧，全部 `resolution_*` 字段为空。
+- 定向测试 `5 passed`，使用 `PYTHONPATH=backend` 后 Phase 7 全量回归 `214 passed`；确定性重跑输出哈希一致。
+- 本步骤不调用外部模型/API，也不执行 Gold promotion 或 freeze。下一步 B3.6j-d 是作者 `PYH` 对 31 条分歧进行逐条裁决，完成后才能进入独立 Gold promotion gate。
+
+## Phase 7-B3.6j-d：分歧裁决门禁与作者裁决完成（2026-08-16）
+
+- 以 TDD 新增 `benchmark120_disagreement_adjudication.py`、固定配置和 6 项定向测试；工具固定锁定 B3.6j-c 的待裁决队列与摘要 SHA-256，并将 31 条记录确定性拆分为 `8/8/8/7` 四批。
+- 四批工作包保持与 AI 建议分离；收到作者 `reviewer_id=PYH` 对 31 条建议的显式确认后，才原子写入正式裁决字段。
+- 另生成 31 条只读 AI 裁决建议，用于降低作者逐条复核成本。建议分布为 `answer=29`、`boundary_refusal=2`，`reviewer_id` 保持为空，不能视为作者裁决或 Gold 标签。
+- AI 建议 JSONL 与 Markdown 的 SHA-256 分别为 `3ece5f6f35af1dff038448a0eec546a39939a3cf9be6192bba907f9575b56bfd` 和 `86d76b284d2659275c41e9e047ae2b213b58d5fb66866d3a9953510f41ae5f85`。
+- 裁决门禁要求 31/31 唯一完整覆盖、不可变来源字段无漂移、所有列表字段为合法 JSON 数组；`boundary_refusal` 必须同时满足 `policy_rule + safety_policy`。
+- 四批以 `8/8/8/7` 全部通过校验并完成 `finalize`；正式分布为 `answer=29`、`boundary_refusal=2`。两条边界题仅将同义枚举 `medical_safety_policy` 规范化为协议值 `safety_policy`，未改变问题、来源、页码或 claim 边界。
+- 正式裁决 CSV SHA-256 为 `9471dff8afb1a6f1c9e4f03e7677d28b429dc3788192bd78f9a444e16c33865f`，裁决审计 SHA-256 为 `f7a32d11a9cb6f2fb9d143e2335bcbab9639cab2e7800df850f1fb751b285de2`。
+
+## Phase 7-B3.6j-e：Gold promotion 与冻结完成（2026-08-16）
+
+- 以 TDD 新增并补强 `benchmark120_gold_freeze.py`，8 项定向测试覆盖输入哈希、正式裁决 CSV、裁决审计状态/哈希、31 条裁决完整覆盖、来源/页码漂移、跨 split 泄漏、政策边界以及冻结文件不可覆盖。
+- Gold freeze 只允许把已接受的正式裁决映射回 `requires_second_pass=true` 记录；Validation 40 / Pilot Test 80 必须精确覆盖 120 条，且跨 split 的事实簇、证据锚点组、独立单元、来源页和问题文本不得泄漏。
+- 冻结产物采用原子写入与 immutable preflight：同内容可幂等复跑，已有文件字节不同时 fail closed，禁止静默覆盖。
+- 14 条未进入第二轮的旧边界记录在冻结转换中完成可审计 schema 规范化：`page_span_located -> policy_rule`、`medical_safety_policy -> safety_policy`；2 条作者裁决边界记录已是规范格式。任何不满足旧 schema 前提的记录仍 fail closed。
+- 正式冻结得到 Gold 120 / Validation 40 / Pilot Test 80；决策分布为 `answer=69`、`review_required=11`、`insufficient_evidence=24`、`boundary_refusal=16`。
+- Gold、Validation、Pilot Test SHA-256 分别为 `34ce42a62f004da18d9132baa47980fcf4210ee353f86c865d7e08cc469c0348`、`8f8e0c63e8fa829109df98f3e51d37324c978bf49462ad38f14bfe6f67c2e1f7`、`14afa2988d9ff579471f2d082f9803ce3bfc9e030eb439e7cf2d4c6fa55d5da9`。
+- 独立内容审计和字节级幂等复跑均通过；Gold freeze 定向测试 `8 passed`，Phase 7 全量回归 `228 passed`。`gold_promotion_performed=true`、`freeze_performed=true`，但 `clinically_validated=false`，且本步骤外部模型/API、token 和费用均为 0。

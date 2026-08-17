@@ -1,0 +1,28 @@
+{
+  "config_version": "benchmark-anchor-supplement-author-review-config-v0.2",
+  "review_version": "benchmark-anchor-supplement-author-review-v0.2",
+  "dataset_version": "benchmark-v1.0-anchor-supplement-pre-review",
+  "kb_version": "KB-medium-v1",
+  "expected_candidate_count": 46,
+  "batch_sizes": [10, 10, 10, 10, 6],
+  "candidate_path": "revision/benchmark/benchmark_v1/benchmark_anchor_supplement_candidates_v0_2.jsonl",
+  "review_queue_path": "revision/benchmark/benchmark_v1/benchmark_anchor_supplement_review_queue_v0_2.csv",
+  "audit_path": "revision/benchmark/benchmark_v1/benchmark_anchor_supplement_audit_v0_2.json",
+  "summary_path": "revision/benchmark/benchmark_v1/benchmark_anchor_supplement_summary_v0_2.md",
+  "output_dir": "revision/benchmark/benchmark_v1",
+  "expected_input_sha256": {
+    "candidates": "4083e6c41efbc9dd9ace72b73a783bde6c930310dec0d8e1a0afc767ec26d678",
+    "review_queue": "2e25f89295cad29f725636ea08d591a9c239e0475fbbc03c0eee47e01381321d",
+    "audit": "663c7f4968bf34e59af63faba59caf760bfc08542b3f2f2c074fb8ea62315ae3",
+    "summary": "9ec4a6d36ee07e2fd66a857180eb7fcbdf8bccff971e7f2af34d4bacadb0079c"
+  },
+  "allowed_author_outcomes": [
+    "accepted",
+    "revision_required",
+    "rejected"
+  ],
+  "allowed_final_decisions": [
+    "review_required",
+    "boundary_refusal"
+  ]
+}

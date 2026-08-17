@@ -1,0 +1,81 @@
+{
+  "config_version": "benchmark120-selection-config-v0.1",
+  "selection_version": "benchmark120-selection-draft-v0.1",
+  "dataset_version": "benchmark-v1.0-selection-draft-v0.1",
+  "kb_version": "KB-medium-v1",
+  "selection_seed": 20260814,
+  "ngram_size": 3,
+  "jaccard_threshold": 0.65,
+  "corrupt_reason_pattern": "\\?{3,}",
+  "expected_selectable_pool_count": 146,
+  "expected_quarantine_count": 36,
+  "expected_quarantine_distribution": {
+    "corrupt_resolution_reason": 34,
+    "pass1_pass2_disagreement": 1,
+    "pass2_not_accepted": 1
+  },
+  "expected_selected_count": 120,
+  "expected_selected_two_pass_count": 89,
+  "expected_selected_single_pass_count": 31,
+  "expected_split_annotation_pass_distribution": {
+    "validation": {
+      "two_pass": 30,
+      "single_pass": 10
+    },
+    "pilot_test": {
+      "two_pass": 59,
+      "single_pass": 21
+    }
+  },
+  "target_decision_distribution": {
+    "answer": 40,
+    "review_required": 40,
+    "insufficient_evidence": 24,
+    "boundary_refusal": 16
+  },
+  "split_targets": {
+    "validation": {
+      "answer": 13,
+      "review_required": 13,
+      "insufficient_evidence": 8,
+      "boundary_refusal": 6
+    },
+    "pilot_test": {
+      "answer": 27,
+      "review_required": 27,
+      "insufficient_evidence": 16,
+      "boundary_refusal": 10
+    }
+  },
+  "desired_validation_two_pass_count": 30,
+  "gold_promotion_allowed": false,
+  "freeze_allowed": false,
+  "input_paths": {
+    "pass2_queue": "revision/benchmark/benchmark_v1/benchmark_pass2_review_queue_v0_1.csv",
+    "pass2_linkage": "revision/benchmark/benchmark_v1/benchmark_pass2_linkage_v0_1.json",
+    "resolution": "revision/benchmark/benchmark_v1/annotation_resolution_resolved_v0_1.csv",
+    "new_reviewed_pool": "revision/benchmark/benchmark_v1/benchmark_anchor_supplement_reviewed_pool_v0_2.jsonl",
+    "dev50": "revision/benchmark/dev50/dev50_v1_0_frozen.jsonl",
+    "original_candidates": "revision/benchmark/benchmark_v1/benchmark_candidates_v0_2_deduplicated.jsonl",
+    "supplement_candidates": "revision/benchmark/benchmark_v1/benchmark_supplement_candidates_v0_1.jsonl",
+    "source_manifest": "data/guidelines/source_manifest.json"
+  },
+  "input_sha256": {
+    "revision/benchmark/benchmark_v1/benchmark_pass2_review_queue_v0_1.csv": "95bcacbb07a93fce5e11d04d77d86ca7e9d52d4bc5f55109da7ec7265a1224ad",
+    "revision/benchmark/benchmark_v1/benchmark_pass2_linkage_v0_1.json": "f05c77d953c07b904c3b9a1e6fa3c1b3fd755b5030ca25dbcd4349d544438b40",
+    "revision/benchmark/benchmark_v1/annotation_resolution_resolved_v0_1.csv": "bf1f6506511c4853a7a76a5787af785ddf95b7766f23015b8dd044b53ab7a31d",
+    "revision/benchmark/benchmark_v1/benchmark_anchor_supplement_reviewed_pool_v0_2.jsonl": "09266a42377557fba647079d95f1103706b8407c9008cf09fe07ebc7b71d9c6d",
+    "revision/benchmark/dev50/dev50_v1_0_frozen.jsonl": "54eb5c86fd65faf75800d16c2430aa684190e2712bfd91c2f172fc3d4de5bc0a",
+    "revision/benchmark/benchmark_v1/benchmark_candidates_v0_2_deduplicated.jsonl": "4741ee2dca56611b896b9f61fb53080416a352acf643317fb82f574213628611",
+    "revision/benchmark/benchmark_v1/benchmark_supplement_candidates_v0_1.jsonl": "55f0fd69a110389adbb51f382315001ea99898ab75db7c2336d490c1b2596fa6",
+    "data/guidelines/source_manifest.json": "639b394177c598eae537f1f9875c583df027a308c99fd0cdfd99602bb8b091e6"
+  },
+  "output_dir": "revision/benchmark/benchmark_v1",
+  "outputs": {
+    "selectable_pool": "benchmark_selectable_pool_v0_1.jsonl",
+    "selection_draft": "benchmark120_selection_draft_v0_1.jsonl",
+    "split_proposal": "benchmark120_split_proposal_v0_1.json",
+    "audit": "benchmark120_selection_audit_v0_1.json",
+    "summary": "benchmark120_selection_summary_v0_1.md"
+  }
+}

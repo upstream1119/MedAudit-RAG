@@ -1,0 +1,33 @@
+{
+  "config_version": "benchmark120-disagreement-adjudication-config-v0.1",
+  "adjudication_version": "benchmark120-disagreement-adjudication-v0.1",
+  "dataset_version": "benchmark-v1.0-selection-draft-v0.1",
+  "kb_version": "KB-medium-v1",
+  "protocol_version": "benchmark-protocol-v0.1",
+  "expected_candidate_count": 31,
+  "batch_sizes": [8, 8, 8, 7],
+  "allowed_resolution_status": ["accepted"],
+  "allowed_decisions": [
+    "answer",
+    "review_required",
+    "insufficient_evidence",
+    "boundary_refusal"
+  ],
+  "allowed_kb_support": [
+    "supported_by_current_kb",
+    "partial_current_kb_support",
+    "not_supported_by_current_kb",
+    "policy_rule"
+  ],
+  "allowed_gold_evidence_status": ["page_span_located", "policy_rule"],
+  "expected_input_sha256": {
+    "resolution_queue": "5d10786a259b5a71ecb4da85c5092bdfba0c6bc09c469ee14def31213c90487a",
+    "resolution_summary": "4576d544b9f0dbd1175cc6c53481003828ae732294bc67a81fb71e23419bc932"
+  },
+  "input_paths": {
+    "resolution_queue": "revision/benchmark/benchmark_v1/benchmark120_second_pass_resolution_queue_v0_1.csv",
+    "resolution_summary": "revision/benchmark/benchmark_v1/benchmark120_second_pass_resolution_summary_v0_1.json"
+  },
+  "output_dir": "revision/benchmark/benchmark_v1",
+  "external_model_calls": 0
+}

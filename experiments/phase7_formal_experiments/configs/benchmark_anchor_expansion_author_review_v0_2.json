@@ -1,0 +1,16 @@
+{
+  "config_version": "benchmark-anchor-expansion-author-review-config-v0.2",
+  "review_version": "benchmark-anchor-expansion-author-review-v0.2",
+  "dataset_version": "benchmark-v1.0-pre-freeze",
+  "kb_version": "KB-medium-v1",
+  "expected_candidate_count": 58,
+  "batch_size": 10,
+  "expected_parent_queue_sha256": "423198aefbb6110fb988f14317493c4c7a55802e1f50c7231947e26224bd9b1b",
+  "expected_assistant_draft_sha256": "62826dfa7f01c2ec039ad659a743ce3868e1a0a43b980ee1d9226d2ad3924a3a",
+  "min_verified_text_chars": 40,
+  "allowed_author_outcomes": [
+    "accepted",
+    "rejected"
+  ],
+  "required_scope_check": "within_can_support"
+}
