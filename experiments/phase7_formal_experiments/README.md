@@ -1,6 +1,6 @@
 # Phase 7 Formal Experiments
 
-本目录用于运行冻结 Benchmark、检索配置选择与生成侧配对实验。当前已完成 Benchmark120 的作者双轮核验与冻结、Validation40 输入隔离、Phase 7-C1c-4d 强非图基线选择、`C1c-4e-2e-2b` 的 `G1-v0.2` 候选扩展配对评测，以及 `C1c-4e-2e-2c` 的正式损失审计。`G1-v0.2` 已按预声明规则冻结为 Validation40 开发配置；下一步先运行 matched-compute `F24` 非图控制，再进入 G2 图重排。G3 图一致性审计、完整 Graph-enhanced 方法和临床验证结论尚未形成；Pilot Test80 仍未读取。
+本目录用于运行冻结 Benchmark、检索配置选择与生成侧配对实验。当前已完成 Benchmark120 的作者双轮核验与冻结、Validation40 输入隔离、Phase 7-C1c-4d 强非图基线选择，以及 `C1c-4e-3a` 的前缀稳定 matched-compute `F24/G1-v0.4` 配对实验。`G1-v0.4` 在 Validation40 开发集上的候选严格来源页召回@24由 `21/40` 提高至 `26/40`，最终严格来源页召回@4由 `20/40` 提高至 `22/40`，但当前不声称统计显著性。下一步先补齐 graph path provenance，再进入 `C1c-4e-3b` G2 图重排；G3 图一致性审计、完整 Graph-enhanced 方法和临床验证结论尚未形成，Pilot Test80 仍未读取。
 
 ## 当前输入
 
