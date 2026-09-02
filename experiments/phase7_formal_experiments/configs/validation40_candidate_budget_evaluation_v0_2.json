@@ -1,0 +1,17 @@
+{
+  "config_version": "validation40-candidate-budget-evaluation-config-v0.2-exact-control",
+  "phase": "Phase 7-C1c-4e-1",
+  "gold_path": "revision/benchmark/benchmark_v1/benchmark120_validation40_v1_0.jsonl",
+  "retrieval_path": "revision/phase7/c1c4e1/validation40_candidate_budget_exact_v0_3/raw_runs/run_a/validation40_candidate_budget_results_v0_3.jsonl",
+  "retrieval_audit_path": "revision/phase7/c1c4e1/validation40_candidate_budget_exact_v0_3/raw_runs/run_a/validation40_candidate_budget_retrieval_audit_v0_3.json",
+  "output_dir": "revision/phase7/c1c4e1/validation40_candidate_budget_exact_v0_3/evaluation",
+  "expected_gold_sha256": "8f8e0c63e8fa829109df98f3e51d37324c978bf49462ad38f14bfe6f67c2e1f7",
+  "expected_retrieval_execution_version": "validation40-candidate-budget-retrieval-v0.3-exact-control",
+  "candidate_budgets": [20, 40, 80],
+  "methods": ["bge_m3_dense_exact", "bge_m3_sparse", "dense_exact_sparse_rrf"],
+  "adjacent_page_tolerance": 1,
+  "external_model_calls": 0,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "estimated_cost": 0.0
+}

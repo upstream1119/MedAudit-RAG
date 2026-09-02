@@ -1,0 +1,37 @@
+{
+  "config_version": "phase7-c1c4e3a-prefix-stable-paired-evaluation-v0.4",
+  "phase": "Phase 7-C1c-4e-3a",
+  "purpose": "Gold-only offline evaluation of prefix-stable matched-compute F24 versus source-routed G1-v0.4",
+  "dataset_version": "benchmark-v1.0-guideline-grounded-author-adjudicated",
+  "kb_version": "KB-medium-v1",
+  "results_path": "revision/phase7/c1c4e/validation40_f24_g1v04_prefix_stable/run_a/validation40_f24_g1v04_prefix_stable_results_v0_4.jsonl",
+  "retrieval_manifest_path": "revision/phase7/c1c4e/validation40_f24_g1v04_prefix_stable/run_a/manifest.json",
+  "gold_path": "revision/benchmark/benchmark_v1/benchmark120_validation40_v1_0.jsonl",
+  "output_dir": "revision/phase7/c1c4e/validation40_f24_g1v04_prefix_stable/evaluation",
+  "expected_retrieval_manifest_sha256": "d3ac70786429be9108971d17ae9e0e8674d6cac3bbd883a43771f5405d339e59",
+  "expected_retrieval_results_sha256": "79e56ffb5347ccb19df1cd1647a9acaf27ed1e055f68712df32c2f90fddfca22",
+  "expected_gold_sha256": "8f8e0c63e8fa829109df98f3e51d37324c978bf49462ad38f14bfe6f67c2e1f7",
+  "expected_count": 40,
+  "candidate_budget": 24,
+  "candidate_output_field": "candidates_top24",
+  "f_method": "f24_prefix_stable_hybrid_reranker_dedup",
+  "g1_method": "g1_v0_4_prefix_stable_graph_expand_reranker_dedup",
+  "summary_version": "phase7-c1c4e3a-prefix-stable-paired-evaluation-v0.4",
+  "audit_version": "phase7-c1c4e3a-prefix-stable-paired-evaluation-audit-v0.4",
+  "manifest_version": "phase7-c1c4e3a-prefix-stable-paired-evaluation-manifest-v0.4",
+  "sample_metrics_filename": "validation40_f24_g1v04_prefix_stable_sample_metrics_v0_4.jsonl",
+  "summary_filename": "validation40_f24_g1v04_prefix_stable_summary_v0_4.json",
+  "report_filename": "validation40_f24_g1v04_prefix_stable_report_v0_4.md",
+  "audit_filename": "validation40_f24_g1v04_prefix_stable_evaluation_audit_v0_4.json",
+  "manifest_filename": "manifest.json",
+  "freeze_rule": {
+    "candidate_strict_recall_at_24_must_improve": true,
+    "final_strict_recall_at_4_must_not_degrade": true
+  },
+  "execution_guards": {
+    "validation40_gold_only": true,
+    "pilot_test_content_access": false,
+    "external_model_calls": false,
+    "clinical_validation_claimed": false
+  }
+}

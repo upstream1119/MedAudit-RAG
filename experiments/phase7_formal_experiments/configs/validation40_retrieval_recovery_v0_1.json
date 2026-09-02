@@ -1,0 +1,36 @@
+{
+  "config_version": "validation40-retrieval-recovery-config-v0.1",
+  "recovery_version": "validation40-retrieval-recovery-v0.1",
+  "runtime_projection_path": "revision/phase7/validation40_inputs/validation40_runtime_projection_v0_1.jsonl",
+  "output_dir": "revision/phase7/validation40_retrieval_recovery_v0_1",
+  "chroma_persist_dir": "backend/data/chroma_db_local",
+  "index_status_path": "backend/data/chroma_db_local/index_status.json",
+  "expected_runtime_projection_sha256": "d6d425dddd5411ea4ea731e17780f1d2406bebadaf99a96a313e28c80feffbc5",
+  "expected_index_status_sha256": "9d83ce8b2881fa82ea49cf9ae1afe247c326520eb76dc254c8b85d7dab0542c0",
+  "expected_sample_count": 40,
+  "expected_dataset_version": "benchmark-v1.0-guideline-grounded-author-adjudicated",
+  "expected_kb_version": "KB-medium-v1",
+  "expected_embedding_provider": "local",
+  "expected_embedding_model": "BAAI/bge-small-zh-v1.5",
+  "granularities": [
+    128,
+    512,
+    1024
+  ],
+  "candidate_pool_k": 20,
+  "final_evidence_k": 4,
+  "evidence_context_min": 2,
+  "rrf_constant": 60,
+  "neighbor_radius": 1,
+  "max_neighbors_per_seed": 1,
+  "execute_retrieval": true,
+  "execute_model_calls": false,
+  "query_rewrite_enabled": false,
+  "cross_encoder_enabled": false,
+  "graph_reranking_enabled": false,
+  "seed": 20260822,
+  "post_retrieval_evaluation": {
+    "gold_path": "revision/benchmark/benchmark_v1/benchmark120_validation40_v1_0.jsonl",
+    "expected_gold_sha256": "8f8e0c63e8fa829109df98f3e51d37324c978bf49462ad38f14bfe6f67c2e1f7"
+  }
+}

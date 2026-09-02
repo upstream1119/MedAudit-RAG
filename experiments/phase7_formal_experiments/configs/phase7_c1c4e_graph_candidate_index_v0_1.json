@@ -1,0 +1,20 @@
+{
+  "config_version": "phase7-c1c4e2-graph-candidate-index-config-v0.1",
+  "phase": "Phase 7-C1c-4e-2b",
+  "dataset_version": "benchmark-v1.0-guideline-grounded-author-adjudicated",
+  "kb_version": "KB-medium-v1",
+  "exact_asset_dir": "backend/data/chroma_db_bge_m3_exact_control_v0_1",
+  "output_dir": "revision/phase7/c1c4e/graph_candidate_index_v0_1",
+  "expected_candidate_count": 30357,
+  "expected_asset_manifest_sha256": "66d07e2e98b3ca2d51e2d1314574c50832f59fd673fa28997c19d5b3ba7fa9ad",
+  "expected_collection_rows_sha256": {
+    "detail_128": "71978126e1036024289d2312bd8b7cf10a9111cdec3d0f9ce7ddbb2480f9bcb9",
+    "concept_512": "c6378f7b8f37b6ad11e226c4ee5860975ccbb87062541da4efc1cccd0ca866b0",
+    "context_1024": "797ce74919beed93c97d344d08ebef63929ed43215ed0f41cbec3cebced20ca7"
+  },
+  "graph_index_version": "phase7-c1c4e2-candidate-graph-v0.1",
+  "external_model_calls": 0,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "estimated_cost": 0.0
+}

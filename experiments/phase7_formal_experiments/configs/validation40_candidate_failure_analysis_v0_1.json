@@ -1,0 +1,16 @@
+{
+  "analysis_version": "validation40-candidate-failure-analysis-v0.1",
+  "gold_path": "revision/benchmark/benchmark_v1/benchmark120_validation40_v1_0.jsonl",
+  "retrieval_path": "revision/phase7/c1c4d/validation40/validation40_hybrid_retrieval_results_v0_1.jsonl",
+  "retrieval_audit_path": "revision/phase7/c1c4d/validation40/validation40_hybrid_retrieval_audit_v0_1.json",
+  "output_dir": "revision/phase7/c1c4e/failure_analysis_v0_1",
+  "expected_gold_sha256": "8f8e0c63e8fa829109df98f3e51d37324c978bf49462ad38f14bfe6f67c2e1f7",
+  "expected_retrieval_sha256": "8998085f0508df108e13c136c91a52ece2842b3506fb489afb71927849ab5dc6",
+  "expected_retrieval_audit_sha256": "08a1afd794d9bade5e50c3f6836f6f511e4d3ded664413de2abc276da6fd2565",
+  "adjacent_page_tolerance": 1,
+  "requested_candidate_budgets": [20, 40, 80],
+  "external_model_calls": 0,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "estimated_cost": 0.0
+}

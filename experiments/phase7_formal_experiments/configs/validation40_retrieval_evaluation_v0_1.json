@@ -1,0 +1,35 @@
+{
+  "config_version": "validation40-retrieval-evaluation-config-v0.1",
+  "evaluation_version": "validation40-retrieval-evaluation-v0.1",
+  "gold_path": "revision/benchmark/benchmark_v1/benchmark120_validation40_v1_0.jsonl",
+  "physical_results_path": "revision/phase7/validation40_retrieval/full/validation40_physical_retrieval_cache_v0_1.jsonl",
+  "task_results_path": "revision/phase7/validation40_retrieval/full/validation40_retrieval_results_v0_1.jsonl",
+  "retrieval_audit_path": "revision/phase7/validation40_retrieval/full/validation40_retrieval_audit_v0_1.json",
+  "output_dir": "revision/phase7/validation40_retrieval_evaluation",
+  "expected_gold_sha256": "8f8e0c63e8fa829109df98f3e51d37324c978bf49462ad38f14bfe6f67c2e1f7",
+  "expected_physical_results_sha256": "36b1ba74b331ee1c03b633a1b552515e8a2d1142efdc00ef6d0c901faa0e704a",
+  "expected_task_results_sha256": "d99ad50d2460b0410851eb477dcd3b5d2967615450667dcb94fea24b7274bb4a",
+  "expected_retrieval_audit_sha256": "295c52d153e35d1ded1378531257989d57c4c9e4ff41efa136a061e54f6adb5f",
+  "expected_sample_count": 40,
+  "expected_physical_result_count": 80,
+  "expected_logical_task_count": 160,
+  "expected_dataset_version": "benchmark-v1.0-guideline-grounded-author-adjudicated",
+  "expected_kb_version": "KB-medium-v1",
+  "expected_profiles": [
+    "single_granularity",
+    "multi_granularity"
+  ],
+  "expected_methods": [
+    "naive_rag",
+    "multi_granularity_rag",
+    "trust_gated_rag",
+    "graph_enhanced_full"
+  ],
+  "adjacent_page_tolerance": 1,
+  "text_ngram_size": 3,
+  "redundancy_jaccard_threshold": 0.8,
+  "execute_retrieval": false,
+  "execute_model_calls": false,
+  "graph_reranking_executed": false,
+  "seed": 20260817
+}

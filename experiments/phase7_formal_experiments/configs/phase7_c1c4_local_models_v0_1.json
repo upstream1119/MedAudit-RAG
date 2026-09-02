@@ -1,0 +1,43 @@
+{
+  "config_version": "phase7_c1c4_local_models_v0.1",
+  "phase": "Phase 7-C1c-4",
+  "purpose": "Local dense retrieval and reranking model identity for Validation40 development only",
+  "dataset_version": "Benchmark-v1.0-Validation40",
+  "kb_version": "KB-medium-v1-22-sources",
+  "embedding": {
+    "provider": "local",
+    "model_id": "BAAI/bge-m3",
+    "model_path_env": "LOCAL_EMBEDDING_MODEL_PATH",
+    "device_env": "LOCAL_EMBEDDING_DEVICE",
+    "batch_size_env": "LOCAL_EMBEDDING_BATCH_SIZE",
+    "output_dimension": 1024,
+    "normalize_embeddings": true
+  },
+  "reranker": {
+    "model_id": "BAAI/bge-reranker-v2-m3",
+    "model_path_env": "RERANKER_MODEL_PATH",
+    "device_env": "RERANKER_DEVICE",
+    "batch_size_env": "RERANKER_BATCH_SIZE",
+    "candidate_k_env": "RERANKER_CANDIDATE_K",
+    "candidate_k": 20,
+    "final_evidence_k": 4,
+    "integration_status": "configured_not_yet_executed"
+  },
+  "index": {
+    "persist_directory": "backend/data/chroma_db_bge_m3",
+    "reuse_legacy_index": false,
+    "legacy_index_directory": "backend/data/chroma_db_local",
+    "dimension_mismatch_guard": true
+  },
+  "sparse_retrieval": {
+    "enabled": false,
+    "planned_backend": "FlagEmbedding",
+    "status": "planned_not_implemented"
+  },
+  "execution_guards": {
+    "validation40_only": true,
+    "pilot_test_access": false,
+    "external_model_calls": false,
+    "clinical_validation_claimed": false
+  }
+}

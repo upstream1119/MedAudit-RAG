@@ -1,6 +1,6 @@
 # Phase 7 Formal Experiments
 
-本目录用于运行生成侧配对实验。当前已完成 Phase 7-A1 执行器验证、Phase 7-A2 双候选模型 3 样本真实 smoke、Phase 7-A2.1 延迟与生成回答 claim-level 审计、Phase 7-A3 Frozen15 离线预检、Phase 7-A3.1 的 24 次缺失调用与 30 条回答审计，以及 Phase 7-A3.2 的通用约束语义校准。Frozen15 仍是开发集，尚未形成 Graph-enhanced 正式效果结论。
+本目录用于运行冻结 Benchmark、检索配置选择与生成侧配对实验。当前已完成 Benchmark120 的作者双轮核验与冻结、Validation40 输入隔离、Phase 7-C1c-4d 强非图基线选择、`C1c-4e-2e-2b` 的 `G1-v0.2` 候选扩展配对评测，以及 `C1c-4e-2e-2c` 的正式损失审计。`G1-v0.2` 已按预声明规则冻结为 Validation40 开发配置；下一步先运行 matched-compute `F24` 非图控制，再进入 G2 图重排。G3 图一致性审计、完整 Graph-enhanced 方法和临床验证结论尚未形成；Pilot Test80 仍未读取。
 
 ## 当前输入
 
@@ -812,3 +812,335 @@ D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_expe
 - `revision/phase7/validation40_preflight/validation40_experiment_preflight_summary_v0_1.md`
 
 下一步 Phase 7-C1c 只执行和缓存 Validation40 的离线检索结果，继续禁止读取 Pilot Test 80 和调用外部生成模型。完成证据上下文审计后，真实模型调用必须另设批准门禁。
+
+## Phase 7-C1c-1：Validation40 离线检索执行与缓存冻结（2026-08-21）
+
+使用固定的本地 BGE embedding 和 22 源 ChromaDB 索引执行检索：
+
+```powershell
+$env:DEBUG='true'
+$env:PYTHONPATH='backend'
+$env:PYTHONIOENCODING='utf-8'
+$env:EMBEDDING_PROVIDER='local'
+$env:EMBEDDING_MODEL='BAAI/bge-small-zh-v1.5'
+$env:CHROMA_PERSIST_DIR=(Resolve-Path 'backend\data\chroma_db_local').Path
+$env:HF_HUB_OFFLINE='1'
+$env:TRANSFORMERS_OFFLINE='1'
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\validation40_retrieval_execution.py --config experiments\phase7_formal_experiments\configs\validation40_retrieval_execution_v0_1.json --repo-root .
+```
+
+- 配置同时锁定 embedding provider/model、Chroma 持久化目录和 `index_status.json` SHA-256；运行目录或索引身份不一致时 fail closed，避免 512 维查询误连 1024 维旧索引。
+- 40 个 Validation 样本形成 160 个逻辑检索任务；Naive RAG 使用固定 512 粒度，Multi-granularity / Trust-gated / Graph-enhanced 共享多粒度物理检索，因此实际执行 80 个物理检索。
+- 物理结果为 `completed=72`、`insufficient_evidence=8`、`failed=0`；每个上下文保留 0-4 个真实证据片段，不补造证据。来源、页码或正文无效、纯标题占位和完全重复片段会被过滤。
+- 缓存身份包含 execution、dataset、KB、embedding、Chroma 路径和索引状态哈希；已完成/证据不足结果可复用，技术失败只重跑失败项，并保存 `error_type/error_message`。
+- Pilot Test 80 仅做哈希门禁，执行前后 SHA-256 均为 `14afa2988d9ff579471f2d082f9803ce3bfc9e030eb439e7cf2d4c6fa55d5da9`；`pilot_test_accessed=false`，Gold-only 字段泄漏为 0。
+- 五个正式输出 SHA-256 分别为 physical `36b1ba74...e704a`、task results `d99ad50d...bb4a`、failures `e3b0c442...b855`、audit `295c52d1...b5f`、summary `0d5f34b7...2639`。
+- smoke3 两次运行的五个输出哈希逐项一致；定向测试 `8 passed`、Phase 7 回归 `252 passed`、后端/Phase 6/Phase 7 联合回归 `416 passed`。
+- 本步骤没有调用外部模型/API，`external_model_calls=0`、`input_tokens=0`、`output_tokens=0`、`estimated_cost=0`；`graph_reranking_executed=false`、`clinically_validated=false`。
+
+当前完成的是可复现的原始检索与证据缓存，不是检索质量达标或方法效果结论。人工抽样发现部分同来源同页片段存在语义重叠，且个别 Top-4 结果相关性偏弱；下一步应在 Validation40 Gold 上计算 retrieval recall/precision、来源页命中和冗余率，再决定去重、重排与阈值调整。真实生成模型调用继续等待独立批准。
+
+## Phase 7-C1c-2：Validation40 冻结检索质量评测（2026-08-21）
+
+对 C1c-1 已冻结的 80 条物理检索结果做离线评测，不重新检索、不调用模型、不读取 Pilot Test80：
+
+```powershell
+$env:PYTHONPATH='backend'
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\validation40_retrieval_evaluation.py --config experiments\phase7_formal_experiments\configs\validation40_retrieval_evaluation_v0_1.json
+```
+
+| 物理检索配置 | Gold 来源召回@K | Gold 来源-页码精确召回@K | 来源-页码 MRR | ±1 页诊断召回@K | 平均 Gold 锚点字符覆盖 | 证据不足率 | 词法冗余证据对比例 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `single_granularity` | 0.4500 | 0.2250 | 0.1458 | 0.3250 | 0.2371 | 0.1500 | 0.0816 |
+| `multi_granularity` | 0.4750 | 0.2000 | 0.1250 | 0.3000 | 0.1785 | 0.0500 | 0.1060 |
+
+- 主指标严格使用冻结 Gold 的来源与页码精确匹配；`±1` 页只用于诊断，不能并入主指标。
+- 字符 n-gram 覆盖和冗余率是确定性词法代理，不是语义相似度、claim-level support 或临床正确性指标。
+- 当前只存在 `single_granularity` 与 `multi_granularity` 两种真实物理检索配置。Trust-gated 与 Graph-enhanced 尚共享多粒度检索，且 `graph_reranking_executed=false`，因此本步骤不生成虚假的四方法检索对比。
+- 每题只冻结一个 Gold 主锚点，精确来源-页码召回只能作为单锚点代理；它可能低估可接受的替代权威证据，也不能视为完整证据精确率。
+- 单粒度精确命中 9/40，多粒度精确命中 8/40。两者都没有达到可直接进入最终模型实验的理想检索水平；多粒度仅降低了证据不足率，但没有改善精确页码召回、MRR、词法覆盖或冗余率。
+- 3 个物理结果虽然命中冻结 Gold 来源页，仍被上游标记为 `insufficient_evidence`。这说明“命中事实”和“安全状态”需要分开审计，下一步应检查最小证据数、过滤和状态路由，而不是直接改 Gold 或放宽结论。
+- 四个输入资产 SHA-256 均通过锁定校验；两次正式运行的五个输出 SHA-256 完全一致。定向测试 `5 passed`、Phase 7 回归 `257 passed`、跨后端/Phase 6/Phase 7 回归 `421 passed`。
+- 本步骤 `external_model_calls=0`、`input_tokens=0`、`output_tokens=0`、`estimated_cost=0`，且 `pilot_test_read=false`、`clinically_validated=false`。
+
+主要产物：
+
+- `revision/phase7/validation40_retrieval_evaluation/validation40_retrieval_sample_metrics_v0_1.jsonl`
+- `revision/phase7/validation40_retrieval_evaluation/validation40_retrieval_profile_summary_v0_1.json`
+- `revision/phase7/validation40_retrieval_evaluation/validation40_retrieval_failure_cases_v0_1.jsonl`
+- `revision/phase7/validation40_retrieval_evaluation/validation40_retrieval_evaluation_audit_v0_1.json`
+- `revision/phase7/validation40_retrieval_evaluation/validation40_retrieval_evaluation_summary_v0_1.md`
+
+下一步 Phase 7-C1c-3 应只在 Validation40 上分层审计 `gold_source_miss`、`gold_page_miss`、相邻页命中、冗余片段与命中但证据不足案例，再提出版本化修复方案。任何检索器、阈值、去重或图重排改动都需另设审批和新版本；Pilot Test80 与真实模型调用继续保持关闭。
+
+## Phase 7-C1c-3：候选恢复诊断（2026-08-22）
+
+C1c-3 在 Validation40 上扩大每个粒度的候选池至 20，并加入确定性 RRF、相邻页扩展和最终 Top-4 证据窗口。该实验不调用外部模型，也不读取 Pilot Test80。
+
+- Gold 来源召回@K：`0.3750`。
+- Gold 来源-页码精确召回@K：`0.2000`。
+- ±1 页诊断召回@K：`0.3250`。
+- 来源-页码 MRR：`0.1833`。
+- 证据不足率由旧多粒度配置的 `0.0500` 降至 `0.0000`，但严格来源、来源页和 MRR 均未形成整体改善。
+- `query_rewrite_executed=false`、`cross_encoder_executed=false`、`external_model_calls=0`、`pilot_test_accessed=false`。
+
+因此 C1c-3 是有效的负结果：单纯扩大候选池、相邻页扩展和确定性融合不足以解决严格召回问题。该结果用于支撑 C1c-4 方案 B，而不是性能提升结论。
+
+主要产物：
+
+- `revision/phase7/validation40_retrieval_recovery_v0_1/validation40_retrieval_recovery_results_v0_1.jsonl`
+- `revision/phase7/validation40_retrieval_recovery_v0_1/validation40_retrieval_recovery_profile_summary_v0_1.json`
+- `revision/phase7/validation40_retrieval_recovery_v0_1/validation40_retrieval_recovery_audit_v0_1.json`
+- `revision/phase7/validation40_retrieval_recovery_v0_1/validation40_retrieval_recovery_summary_v0_1.md`
+
+## Phase 7-C1c-4a/4b：CUDA、本地模型与项目配置（2026-08-23）
+
+- 按研究者明确选择，直接升级现有 `verimind_MedAudit_env`，未新建独立 CUDA 环境；该选择降低了环境切换成本，但后续需要保留包清单和可回滚记录。
+- PyTorch 已升级为 `2.12.1+cu130`，`torch.cuda.is_available()` 为 `True`，设备为 NVIDIA GeForce RTX 4060 Laptop GPU。
+- `BAAI/bge-m3` 已保存到 `D:\AI_Models\huggingface\BAAI\bge-m3`；通过项目索引器离线编码，输出维度为 1024。
+- `BAAI/bge-reranker-v2-m3` 已保存到 `D:\AI_Models\huggingface\BAAI\bge-reranker-v2-m3`；CUDA 离线打分 smoke 通过。
+- 新增 `phase7_c1c4_local_models_v0_1.json`，锁定模型身份、1024 维新索引目录、候选 Top-20、最终证据 Top-4 和旧索引不可复用门禁。
+- `backend/.env` 只保存本机模型路径和设备配置，不进入 Git；公开实验配置只保存模型 ID 和环境变量名。
+- 当前只完成 dense embedding 与 reranker 的配置接入和 smoke。`sparse_retrieval.status=planned_not_implemented`，正式 Cross-Encoder 重排尚未执行，BGE-M3 新索引尚未构建。
+- 验证：本轮定向测试 `20 passed`，Phase 7 全量回归 `262 passed`，后端全量回归 `74 passed`。
+
+下一步是 C1c-4c：在 `backend/data/chroma_db_bge_m3` 构建独立 1024 维 BGE-M3 dense 索引并完成 22/22 来源审计。旧 `backend/data/chroma_db_local` 继续作为只读 BGE-small 基线；不得混用两个维度的索引。稀疏检索和 reranker 正式接入属于后续独立任务。
+
+## Phase 7-C1c-4c：BGE-M3 独立索引构建与审计（2026-08-23）
+
+- 使用 `BAAI/bge-m3`、CUDA 和 batch size 4，在独立目录 `backend/data/chroma_db_bge_m3` 完成 1024 维 dense 索引构建；旧 `chroma_db` 与 `chroma_db_local` 未被覆盖。
+- 22/22 份已准入 PDF 均进入 `detail_128`、`concept_512`、`context_1024` 三个 collection；三层 collection 的实际向量维度均为 1024。
+- collection 记录数分别为 `11884 / 7403 / 11070`；缺失来源、扫描件偏重来源、参考文献噪声、图片占位噪声和维度不匹配均为 0。
+- `backend/data/chroma_db_bge_m3/index_status.json` 与 `docs/index_audit_report_chroma_db_bge_m3.json` 均显示 `ready=true`；非默认索引使用独立、带目录名的报告文件，避免覆盖旧基线审计资产。
+- 3 道定向检索 smoke 分别命中 CAP 48-72 小时再评估、阿奇霉素 `qd` 和 5 岁以下发热退热药相关权威正文及真实页码。
+- 旧索引状态、资料清单和冻结 Pilot Test80 的 SHA-256 在构建前后保持一致；本步骤没有读取 Pilot Test80 内容，也没有调用外部模型/API。
+- 验证结果：新增索引构建/审计定向测试 `8 passed`，后端全量回归 `80 passed`，Phase 7 全量回归 `262 passed`。
+
+本步骤证明 BGE-M3 独立索引的来源完整性、维度一致性和运行可用性，不证明严格召回已经改善。smoke 候选尾部仍可见弱相关片段，下一步 C1c-4d 需要在 Validation40 上实现并评测 sparse、dense+sparse hybrid、Cross-Encoder 重排和最终证据去冗余；在这些配置冻结前继续禁止读取 Pilot Test80。
+
+## Phase 7-C1c-4d：强非图检索配置选择与冻结（2026-08-24）
+
+先以本地 BGE-M3 对三个 collection 构建 learned lexical sparse CSR 索引：
+
+```powershell
+$env:HF_HUB_OFFLINE='1'
+$env:TRANSFORMERS_OFFLINE='1'
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\bge_m3_sparse_index.py `
+  --chroma-path backend\data\chroma_db_bge_m3 `
+  --model-path D:\AI_Models\huggingface\BAAI\bge-m3 `
+  --output-dir revision\phase7\c1c4d\bge_m3_sparse_index_v0_1 `
+  --batch-size 4 `
+  --device cuda:0
+```
+
+随后在冻结 Validation40 上运行四种真实配置，并执行独立 Gold 评测：
+
+```powershell
+$env:HF_HUB_OFFLINE='1'
+$env:TRANSFORMERS_OFFLINE='1'
+$env:PYTHONPATH='backend'
+$env:LOCAL_EMBEDDING_MODEL_PATH='D:\AI_Models\huggingface\BAAI\bge-m3'
+$env:RERANKER_MODEL_PATH='D:\AI_Models\huggingface\BAAI\bge-reranker-v2-m3'
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\validation40_hybrid_retrieval.py `
+  --config experiments\phase7_formal_experiments\configs\validation40_hybrid_retrieval_v0_1.json `
+  --repo-root .
+
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\validation40_hybrid_retrieval_evaluation.py `
+  --config experiments\phase7_formal_experiments\configs\validation40_hybrid_retrieval_evaluation_v0_1.json `
+  --repo-root .
+```
+
+| 配置 | 来源@20 | 严格来源页@20 | MRR@20 | 来源@4 | 严格来源页@4 | ±1页@4 | 冗余率 | 平均端到端延迟/题 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `bge_m3_dense` | 0.9000 | 0.4500 | 0.2546 | 0.7500 | 0.3750 | 0.4500 | 0.0083 | 0.0376 s |
+| `bge_m3_sparse` | 0.4000 | 0.4000 | 0.3500 | 0.4000 | 0.4000 | 0.4000 | 0.0000 | 0.0069 s |
+| `dense_sparse_rrf` | 0.7500 | 0.5250 | 0.2670 | 0.5500 | 0.3500 | 0.3750 | 0.0000 | 0.0450 s |
+| `hybrid_reranker_dedup` | 0.7500 | 0.5250 | 0.3883 | 0.7250 | 0.5000 | 0.5500 | 0.0083 | 1.0253 s |
+
+- 按预声明顺序，以最终严格来源页召回@4、候选严格 MRR、最终来源召回@4、冗余率和延迟依次选择，冻结强非图配置为 `hybrid_reranker_dedup`。
+- Cross-Encoder 相对 dense 新增 7 个严格 Top-4 命中、丢失 2 个；融合候选严格命中的 21 题中有 20 题进入最终 Top-4。仍有 19/40 题在融合 Top-20 缺少严格 Gold 页，候选生成仍是主要瓶颈。
+- dense Chroma 与 sparse CSR 索引大小约为 216.9 MB 与 20.3 MB；dense/sparse/reranker 峰值显存约为 2.14/2.12/2.34 GiB。
+- 原始查询向量、六路候选排名、RRF 分数、重排前后顺序和去冗余审计均已保存；五个评测产物幂等复跑哈希一致。
+- 冻结配置同时锁定模型 ID、dense/sparse 索引哈希、Top-K、RRF、去冗余参数、Validation40 Gold 与检索结果哈希，以及未见 Pilot Test80 哈希。
+- 本阶段外部模型/API 调用、input/output tokens 和费用均为 0；Phase 7 回归 `284 passed`，后端回归 `80 passed`。
+- `0.5000` 是 Validation40 的单 Gold 主锚点严格来源页代理指标，不是临床正确率、幻觉率或独立测试集结论，也不能证明 Graph-enhanced 已改善。
+
+主要产物：
+
+- `revision/phase7/c1c4d/bge_m3_sparse_index_v0_1/manifest.json`
+- `revision/phase7/c1c4d/validation40/validation40_hybrid_retrieval_results_v0_1.jsonl`
+- `revision/phase7/c1c4d/validation40/validation40_hybrid_method_summary_v0_1.json`
+- `revision/phase7/c1c4d/validation40/validation40_strong_non_graph_config_v0_1.json`
+- `revision/phase7/c1c4d/validation40/validation40_hybrid_evaluation_audit_v0_1.json`
+
+## Phase 7-C1c-4e：失败驱动的图引导候选扩展
+
+C1c-4d 的 19 个融合候选严格缺页样本并非单一瓶颈：9 个样本已出现 Gold 来源但页码未命中，5 个只命中 `±1` 页，10 个 Gold 来源未出现，另有 3 个样本的 Gold 页已由 Dense 召回但被 RRF 丢失。因此 C1c-4e 不直接把图重排接到现有 Top-20，而按以下顺序执行：
+
+1. `C1c-4e-0`：冻结逐题失败 taxonomy；
+2. `C1c-4e-1`：运行候选预算曲线、路由并集、来源页聚合和来源拥挤度非图控制；
+3. `C1c-4e-2`：实现不读取 Gold-only 字段的 graph-guided candidate expansion；
+4. `C1c-4e-3`：比较 `F / G1 / G2 / G3`；
+5. `C1c-4e-4`：完成图扩展、图重排、图审计和权威约束消融后冻结配置。
+
+严格来源页召回仍为主指标，`±1` 页只作诊断。Graph 收益必须与扩大 K、路由并集和融合修复带来的收益分开报告。完整方法、生成参数、Trust Gate 和统计方案全部冻结后，才允许对 Pilot Test80 进行一次性最终评测。
+
+阶段设计见：
+
+- `revision/phase7/c1c4e/phase7_c1c4e_candidate_expansion_design_v0_1.md`
+
+### C1c-4e-0 正式失败审计
+
+```powershell
+$env:PYTHONPATH='backend'
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments/phase7_formal_experiments/validation40_candidate_failure_analysis.py --config experiments/phase7_formal_experiments/configs/validation40_candidate_failure_analysis_v0_1.json --repo-root .
+```
+
+正式结果：19 个 RRF 严格缺页样本的唯一主类型为相邻页 `5`、融合丢失 `3`、来源缺失 `8`、同源错页 `3`；三路 Top-20 均缺页 `16`。路由并集恢复 `3` 题，来源页聚合降低重复候选但不增加严格页命中。真实单路 Top-40/80 尚未运行，不能用路由并集替代。
+
+验证结果：定向测试 `9 passed`、Phase 7 全量 `293 passed`、后端全量 `80 passed`；正式产物字节级幂等复跑一致。
+
+正式产物：
+
+- `revision/phase7/c1c4e/failure_analysis_v0_1/candidate_failure_cases_v0_1.jsonl`
+- `revision/phase7/c1c4e/failure_analysis_v0_1/candidate_failure_taxonomy_v0_1.json`
+- `revision/phase7/c1c4e/failure_analysis_v0_1/non_graph_candidate_controls_v0_1.json`
+- `revision/phase7/c1c4e/failure_analysis_v0_1/candidate_failure_audit_v0_1.json`
+- `revision/phase7/c1c4e/failure_analysis_v0_1/candidate_failure_summary_v0_1.md`
+
+### C1c-4e-1 Exact Dense 确定性候选预算控制
+
+为避免 Chroma HNSW 独立进程近邻次序漂移影响配对实验，本阶段增加不依赖近似索引的 Exact Dense 控制。该分支从既有 BGE-M3 collection 导出向量，使用 NumPy 穷举平方 L2 距离和稳定 tie-break；它是实验复现控制，不替代在线 HNSW，也不构成新的性能方法。
+
+```powershell
+$env:PYTHONPATH='backend'
+$env:LOCAL_EMBEDDING_MODEL_PATH='D:\AI_Models\huggingface\BAAI\bge-m3'
+$env:HF_HUB_OFFLINE='1'
+$env:TRANSFORMERS_OFFLINE='1'
+
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\build_bge_m3_exact_dense_assets.py `
+  --chroma-path backend\data\chroma_db_bge_m3 `
+  --output-dir backend\data\chroma_db_bge_m3_exact_control_v0_1 `
+  --batch-size 256
+
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\validation40_candidate_budget_retrieval.py `
+  --config experiments\phase7_formal_experiments\configs\validation40_candidate_budget_retrieval_v0_3.json `
+  --repo-root .
+
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\validation40_candidate_budget_evaluation.py `
+  --config experiments\phase7_formal_experiments\configs\validation40_candidate_budget_evaluation_v0_2.json `
+  --repo-root .
+```
+
+| 方法 | Strict@20 | Strict@40 | Strict@80 | Source@80 | Adjacent@80 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `bge_m3_dense_exact` | 0.4250 | 0.6750 | 0.7750 | 0.9750 | 0.8500 |
+| `bge_m3_sparse` | 0.4000 | 0.4000 | 0.4000 | 0.4250 | 0.4000 |
+| `dense_exact_sparse_rrf` | 0.5250 | 0.5250 | 0.7250 | 0.9250 | 0.8500 |
+
+- Exact 资产覆盖 `30,357` 条 `1024` 维切片，约 `136.79 MiB`；manifest SHA-256 为 `66d07e2e98b3ca2d51e2d1314574c50832f59fd673fa28997c19d5b3ba7fa9ad`。
+- 两个独立进程的结果 JSONL 字节级一致，`results_sha256=8a96107f091197cf3f2af2e8a7920489a0c0e2ed5bee88ace3b932eeb970806a`。
+- 原 HNSW Dense Strict@20/40/80 为 `0.4500/0.6750/0.7750`；RRF 命中数与 Exact 分支完全相同。Exact 的作用是确定性控制，不是性能提升。
+- Gold 与 Pilot Test80 哈希未变；外部模型/API 调用、input/output tokens 和费用均为 0。
+- 完整 Phase 7 回归按 `PYTHONPATH=backend` 执行为 `305 passed`。
+- C1c-4e-1 至此完成；C1c-4e-2 将在相同 Exact Dense 控制后端与候选预算下开发 graph-guided candidate expansion，避免把检索后端或扩大 K 的收益误计为 Graph 收益。
+
+### C1c-4e-2b-2：Exact-control F/G1 配对实验
+
+本实验从已冻结的 `dense_exact_sparse_rrf` Top-20 读取同一份候选源，比较：
+
+- `F_exact = exact RRF Top-20 + bge-reranker-v2-m3 + dedup Top-4`；
+- `G1_exact = exact RRF Top-20（预留 4 个图候选替换槽位）+ 同一 reranker + 同一 dedup Top-4`。
+
+图候选只能替换基线尾部候选，不能把候选总预算从 20 扩大。运行阶段不读取 Validation40 Gold；Gold 只在独立评估脚本中打开。Pilot Test80 始终只做字节级 SHA-256 校验，不解析内容。
+
+```powershell
+$env:HF_HUB_OFFLINE='1'
+$env:TRANSFORMERS_OFFLINE='1'
+$env:RERANKER_MODEL_PATH='D:\AI_Models\huggingface\BAAI\bge-reranker-v2-m3'
+$env:RERANKER_DEVICE='cuda'
+$env:PYTHONPATH='.;backend'
+
+# 独立运行 A
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\validation40_graph_candidate_paired_retrieval.py `
+  --config experiments\phase7_formal_experiments\configs\validation40_graph_candidate_paired_retrieval_v0_1.json `
+  --repo-root .
+
+# 独立运行 B：必须写入空目录
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\validation40_graph_candidate_paired_retrieval.py `
+  --config experiments\phase7_formal_experiments\configs\validation40_graph_candidate_paired_retrieval_v0_1.json `
+  --repo-root . `
+  --output-dir revision\phase7\c1c4e\validation40_f_g1_exact_v0_1\run_b
+
+# A/B 核心结果哈希一致后，只评估 run_a
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\validation40_graph_candidate_paired_evaluation.py `
+  --config experiments\phase7_formal_experiments\configs\validation40_graph_candidate_paired_evaluation_v0_1.json `
+  --repo-root .
+```
+
+冻结 `G1` 的必要条件是候选严格来源页召回@20高于 `F_exact`，且最终严格来源页召回@4不低于 `F_exact`。若条件不满足，保留负结果并继续完善疾病、药物、适应证与来源门控，不得通过扩大 K 或改用不同后端包装为 Graph 收益。
+
+#### C1c-4e-2b-2 正式结果
+
+- 两个独立进程的核心结果 JSONL 均为 40 条，SHA-256 同为 `7d49bd1c2e2c9e3d21bc8049d3ef9c4d097d9d28d35dfec902eac269401192cd`，逐字节一致。
+- `F_exact`：候选严格来源页召回@20 `0.5250`，候选来源召回@20 `0.7500`，最终严格来源页召回@4 `0.5000`，最终来源召回@4 `0.7250`。
+- `G1_exact`：上述指标与 `F_exact` 完全相同；新增命中 `0`、新增丢失 `0`、图新增候选 `0`、零扩展 `40/40`。
+- 根因只读诊断：Validation40 中 29 题未抽取到运行时约束，11 题仅抽取到 1 类约束；图扩展规则要求至少命中 2 类约束，因此没有样本满足路径门槛。
+- 冻结建议为 `do_not_freeze_g1`。该结果证明实验控制和负结果审计有效，但不构成“Graph 无效”的方法结论；下一步先修复 Gold-free 约束抽取覆盖，再注册新的 `G1-v0.2`。
+- 两次运行总耗时分别约 `119.84 s` 与 `109.14 s`，峰值 CUDA 显存均约 `2620.69 MB`；Pilot Test80 未解析，检索阶段未读取 Gold，外部模型调用、token 和费用均为 0。
+- 完整 Phase 7 回归为 `329 passed`。
+
+### C1c-4e-2e-2b：G1-v0.2 Gold-only 配对评测
+
+```powershell
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\validation40_graph_candidate_paired_evaluation.py `
+  --config experiments\phase7_formal_experiments\configs\validation40_graph_candidate_paired_evaluation_v0_2.json `
+  --repo-root .
+```
+
+- 冻结输入检索结果 SHA-256 为 `66861d4a83a182a170a4ea0b6d0d34788446d9ba96e8beb282b85bde235d3c45`，检索 manifest SHA-256 为 `e34e6960be5ebb48a8cadf18082d052a76cb94d98579fbeb3060b4d52459068c`。
+- 候选 Top-20 严格来源页召回由 F 的 `21/40`（`0.5250`）提高到 G1-v0.2 的 `24/40`（`0.6000`）；来源召回由 `30/40` 提高到 `36/40`。
+- 最终 Top-4 严格来源页召回由 `20/40`（`0.5000`）提高到 `22/40`（`0.5500`）；来源召回由 `29/40` 提高到 `32/40`。
+- 候选阶段新增/丢失命中为 `5/2`，最终阶段为 `4/2`。预声明裁决为 `freeze_g1_candidate_expansion`，只冻结 Validation40 开发配置中的 G1 候选扩展。
+- 正式产物位于 `revision/phase7/c1c4e/validation40_f_g1_exact_v0_2/evaluation/`；评测读取 Validation40 Gold，但未读取 Pilot Test80，且未调用外部模型/API。
+- 评测器定向回归为 `8 passed`；按 `PYTHONPATH=backend` 执行的 Phase 7 全量回归为 `359 passed`。
+- 下一步先审计候选和最终阶段的新增丢失样本，再设计 `C1c-4e-3` 的 G2 图重排；当前不得写成完整 Graph-enhanced、统计显著性、幻觉率或临床安全收益。
+
+### C1c-4e-2e-2c：正式损失审计
+
+```powershell
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\validation40_graph_candidate_loss_audit.py `
+  --config experiments\phase7_formal_experiments\configs\validation40_graph_candidate_loss_audit_v0_1.json `
+  --repo-root .
+```
+
+- 冻结 F/G1-v0.2 的候选严格来源页命中为 `21/40` 与 `24/40`，最终为 `20/40` 与 `22/40`。
+- 两个候选丢失与两个最终丢失为同一组样本；Gold 在 F pre-rerank rank 19/20，可被现有 reranker 提升到 rank 4/5，但在 G1 固定预算替换时被移出候选池。
+- 共享候选共 `730` 条，内容差异为 0；最大重排分数差 `2.2649765e-06` 低于 `1e-5` 容差。
+- late-union 诊断达到候选 `26/40`、最终 `22/40`，但 reranker 输入增至 20-24 条，只能作为瓶颈诊断。
+- 当前直接入口为 `C1c-4e-3a`：先运行同预算非图 `F24` 控制，再比较 `F20/F24/G1` 并设计 G2；Pilot Test80 与外部生成模型继续关闭。
+
+### C1c-4e-3a：前缀稳定的 F24/G1-v0.4 公平预算实验
+
+Gold-free 配对检索：
+
+```powershell
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\validation40_graph_candidate_paired_retrieval.py `
+  --config experiments\phase7_formal_experiments\configs\validation40_graph_candidate_paired_retrieval_v0_4.json `
+  --repo-root .
+```
+
+Gold-only 离线评测：
+
+```powershell
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\validation40_graph_candidate_paired_evaluation.py `
+  --config experiments\phase7_formal_experiments\configs\validation40_graph_candidate_paired_evaluation_v0_4.json `
+  --repo-root .
+```
+
+- `F24` 固定保留 Exact RRF Top-20，并从同一路 Top-40 顺序补入前 4 个未见候选；`G1-v0.4` 保护同一 Top-20，只允许图候选替换 4 个预留槽位。
+- run_a/run_b 的 40 条核心结果逐字节一致，SHA-256 均为 `79e56ffb5347ccb19df1cd1647a9acaf27ed1e055f68712df32c2f90fddfca22`，结构审计违规为 0。
+- 候选严格来源页召回@24由 `21/40` 提高到 `26/40`，added/lost=`5/0`；最终严格来源页召回@4由 `20/40` 提高到 `22/40`，added/lost=`2/0`。
+- 预声明裁决为 `freeze_g1_candidate_expansion`，仅冻结 Validation40 开发配置中的 G1 候选扩展。候选层双侧 McNemar `p=0.0625`，最终层 `p=0.5`，当前不声称统计显著性。
+- 5 个新增 Gold 候选均由图扩展加入，但输出候选尚未携带完整 graph path trace。下一步先补齐 provenance，再进入 `C1c-4e-3b` G2 图重排。
+- 正式产物位于 `revision/phase7/c1c4e/validation40_f24_g1v04_prefix_stable/`；Pilot Test80 未读取，外部模型/API、input/output tokens 和费用均为 0。

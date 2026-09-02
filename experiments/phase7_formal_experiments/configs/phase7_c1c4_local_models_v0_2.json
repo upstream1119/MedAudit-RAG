@@ -1,0 +1,38 @@
+{
+  "config_version": "phase7-c1c4-local-models-v0.2",
+  "phase": "Phase 7-C1c-4d",
+  "purpose": "Frozen local model identities for Validation40 hybrid retrieval development",
+  "dataset_version": "benchmark-v1.0-guideline-grounded-author-adjudicated",
+  "kb_version": "KB-medium-v1",
+  "embedding": {
+    "provider": "local",
+    "model_id": "BAAI/bge-m3",
+    "model_path_env": "LOCAL_EMBEDDING_MODEL_PATH",
+    "device_env": "LOCAL_EMBEDDING_DEVICE",
+    "output_dimension": 1024,
+    "normalize_embeddings": true,
+    "dense_index_path": "backend/data/chroma_db_bge_m3"
+  },
+  "sparse_retrieval": {
+    "provider": "FlagEmbedding",
+    "model_id": "BAAI/bge-m3",
+    "index_version": "bge-m3-sparse-index-v0.1",
+    "index_path": "revision/phase7/c1c4d/bge_m3_sparse_index_v0_1",
+    "integration_status": "implemented_and_audited"
+  },
+  "reranker": {
+    "provider": "sentence-transformers CrossEncoder",
+    "model_id": "BAAI/bge-reranker-v2-m3",
+    "model_path_env": "RERANKER_MODEL_PATH",
+    "device_env": "RERANKER_DEVICE",
+    "candidate_k": 20,
+    "final_evidence_k": 4,
+    "integration_status": "implemented_pending_validation40_results"
+  },
+  "execution_guards": {
+    "validation40_only": true,
+    "pilot_test_content_access": false,
+    "external_model_calls": false,
+    "clinical_validation_claimed": false
+  }
+}

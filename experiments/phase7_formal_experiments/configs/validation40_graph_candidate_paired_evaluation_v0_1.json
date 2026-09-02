@@ -1,0 +1,28 @@
+{
+  "config_version": "phase7-c1c4e2b2-paired-evaluation-v0.1",
+  "phase": "Phase 7-C1c-4e-2b-2",
+  "purpose": "Gold-only offline evaluation of F_exact versus G1_exact",
+  "dataset_version": "benchmark-v1.0-guideline-grounded-author-adjudicated",
+  "kb_version": "KB-medium-v1",
+  "results_path": "revision/phase7/c1c4e/validation40_f_g1_exact_v0_1/run_a/validation40_f_g1_exact_results_v0_1.jsonl",
+  "retrieval_manifest_path": "revision/phase7/c1c4e/validation40_f_g1_exact_v0_1/run_a/manifest.json",
+  "gold_path": "revision/benchmark/benchmark_v1/benchmark120_validation40_v1_0.jsonl",
+  "output_dir": "revision/phase7/c1c4e/validation40_f_g1_exact_v0_1/evaluation",
+  "expected_gold_sha256": "8f8e0c63e8fa829109df98f3e51d37324c978bf49462ad38f14bfe6f67c2e1f7",
+  "expected_count": 40,
+  "sample_metrics_filename": "validation40_f_g1_exact_sample_metrics_v0_1.jsonl",
+  "summary_filename": "validation40_f_g1_exact_summary_v0_1.json",
+  "report_filename": "validation40_f_g1_exact_report_v0_1.md",
+  "audit_filename": "validation40_f_g1_exact_evaluation_audit_v0_1.json",
+  "manifest_filename": "manifest.json",
+  "freeze_rule": {
+    "candidate_strict_recall_at_20_must_improve": true,
+    "final_strict_recall_at_4_must_not_degrade": true
+  },
+  "execution_guards": {
+    "validation40_gold_only": true,
+    "pilot_test_content_access": false,
+    "external_model_calls": false,
+    "clinical_validation_claimed": false
+  }
+}

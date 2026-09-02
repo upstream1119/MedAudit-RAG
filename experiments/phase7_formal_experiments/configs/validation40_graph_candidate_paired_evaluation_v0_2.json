@@ -1,0 +1,35 @@
+{
+  "config_version": "phase7-c1c4e2e2b-paired-evaluation-v0.2",
+  "phase": "Phase 7-C1c-4e-2e-2b",
+  "purpose": "Gold-only offline evaluation of frozen F_exact versus source-routed G1-v0.2",
+  "dataset_version": "benchmark-v1.0-guideline-grounded-author-adjudicated",
+  "kb_version": "KB-medium-v1",
+  "results_path": "revision/phase7/c1c4e/validation40_f_g1_exact_v0_2/run_a/validation40_f_g1_exact_results_v0_2.jsonl",
+  "retrieval_manifest_path": "revision/phase7/c1c4e/validation40_f_g1_exact_v0_2/run_a/manifest.json",
+  "gold_path": "revision/benchmark/benchmark_v1/benchmark120_validation40_v1_0.jsonl",
+  "output_dir": "revision/phase7/c1c4e/validation40_f_g1_exact_v0_2/evaluation",
+  "expected_retrieval_manifest_sha256": "e34e6960be5ebb48a8cadf18082d052a76cb94d98579fbeb3060b4d52459068c",
+  "expected_retrieval_results_sha256": "66861d4a83a182a170a4ea0b6d0d34788446d9ba96e8beb282b85bde235d3c45",
+  "expected_gold_sha256": "8f8e0c63e8fa829109df98f3e51d37324c978bf49462ad38f14bfe6f67c2e1f7",
+  "expected_count": 40,
+  "f_method": "f_exact_hybrid_reranker_dedup",
+  "g1_method": "g1_v0_2_source_routed_graph_expand_reranker_dedup",
+  "summary_version": "phase7-c1c4e2e2b-paired-evaluation-v0.2",
+  "audit_version": "phase7-c1c4e2e2b-paired-evaluation-audit-v0.2",
+  "manifest_version": "phase7-c1c4e2e2b-paired-evaluation-manifest-v0.2",
+  "sample_metrics_filename": "validation40_f_g1_exact_sample_metrics_v0_2.jsonl",
+  "summary_filename": "validation40_f_g1_exact_summary_v0_2.json",
+  "report_filename": "validation40_f_g1_exact_report_v0_2.md",
+  "audit_filename": "validation40_f_g1_exact_evaluation_audit_v0_2.json",
+  "manifest_filename": "manifest.json",
+  "freeze_rule": {
+    "candidate_strict_recall_at_20_must_improve": true,
+    "final_strict_recall_at_4_must_not_degrade": true
+  },
+  "execution_guards": {
+    "validation40_gold_only": true,
+    "pilot_test_content_access": false,
+    "external_model_calls": false,
+    "clinical_validation_claimed": false
+  }
+}

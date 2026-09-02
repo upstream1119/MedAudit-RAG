@@ -1,0 +1,23 @@
+{
+  "config_version": "phase7-runtime-constraint-coverage-config-v0.3",
+  "audit_version": "phase7-runtime-constraint-coverage-v0.3",
+  "phase": "Phase 7-C1c-4e-2d",
+  "purpose": "Gold-free audit of an opt-in path policy for explicit clinical conditions paired with non-broad medication classes",
+  "runtime_projection_path": "revision/phase7/validation40_inputs/validation40_runtime_projection_v0_1.jsonl",
+  "graph_index_path": "revision/phase7/c1c4e/graph_candidate_index_v0_1/graph_candidate_index_v0_1.json",
+  "lexicon_path": "experiments/phase7_formal_experiments/configs/runtime_graph_entity_lexicon_v0_2.json",
+  "output_dir": "revision/phase7/c1c4e/runtime_constraint_coverage_v0_3",
+  "minimum_matched_constraint_types": 2,
+  "broad_path_threshold": 200,
+  "allow_specific_condition_class_path": true,
+  "audit_filename": "runtime_constraint_coverage_audit_v0_3.json",
+  "report_filename": "runtime_constraint_coverage_report_v0_3.md",
+  "manifest_filename": "manifest.json",
+  "execution_guards": {
+    "validation40_runtime_questions_only": true,
+    "gold_access": false,
+    "pilot_test_content_access": false,
+    "external_model_calls": false,
+    "clinical_validation_claimed": false
+  }
+}
