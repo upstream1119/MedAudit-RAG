@@ -23,6 +23,18 @@ def _project_root() -> Path:
     return Path(__file__).resolve().parent.parent
 
 
+def report_path(root: Path, stem: str, chroma_dir: Path) -> Path:
+    """为非默认索引生成独立报告文件，避免覆盖旧基线。"""
+    suffix = "" if chroma_dir.name == "chroma_db" else f"_{chroma_dir.name}"
+    return root / "docs" / f"{stem}{suffix}.json"
+
+
+def resolve_chroma_dir(root: Path, configured_path: Path) -> Path:
+    """将配置中的相对索引目录解析为项目内绝对路径。"""
+    target = configured_path if configured_path.is_absolute() else root / configured_path
+    return target.resolve()
+
+
 def _collection_names() -> list[str]:
     return ["detail_128", "concept_512", "context_1024"]
 
@@ -62,6 +74,13 @@ def _audit_collection(collection) -> dict[str, object]:
     data = collection.get(include=["metadatas", "documents"])
     metadatas = data.get("metadatas", [])
     documents = data.get("documents", [])
+    embedding_data = collection.get(limit=1, include=["embeddings"])
+    embeddings = embedding_data.get("embeddings")
+    embedding_dimension = (
+        len(embeddings[0])
+        if embeddings is not None and len(embeddings) > 0 and embeddings[0] is not None
+        else 0
+    )
 
     source_counter: Counter[str] = Counter()
     page_buckets: dict[str, list[int]] = defaultdict(list)
@@ -90,6 +109,7 @@ def _audit_collection(collection) -> dict[str, object]:
 
     return {
         "count": collection.count(),
+        "embedding_dimension": embedding_dimension,
         "sources": dict(source_counter),
         "page_ranges": page_ranges,
         "reference_like_documents": reference_like,
@@ -97,9 +117,68 @@ def _audit_collection(collection) -> dict[str, object]:
     }
 
 
+def build_completeness(
+    expected_sources: set[str],
+    report: dict[str, object],
+    index_status: dict[str, object],
+) -> dict[str, object]:
+    """综合来源、三层向量维度和构建状态，保守判断索引是否可用。"""
+    sources_by_collection = {
+        name: set(report.get(name, {}).get("sources", {}).keys())
+        for name in _collection_names()
+    }
+    missing_by_collection = {
+        name: sorted(expected_sources - actual_sources)
+        for name, actual_sources in sources_by_collection.items()
+        if actual_sources != expected_sources
+    }
+    dimensions = {
+        name: int(report.get(name, {}).get("embedding_dimension", 0) or 0)
+        for name in _collection_names()
+    }
+    expected_dimension = int(index_status.get("expected_embedding_dimension", 0) or 0)
+    if expected_dimension:
+        dimension_mismatches = {
+            name: dimension
+            for name, dimension in dimensions.items()
+            if dimension != expected_dimension
+        }
+    else:
+        nonzero_dimensions = {dimension for dimension in dimensions.values() if dimension > 0}
+        dimension_mismatches = (
+            {}
+            if len(nonzero_dimensions) == 1 and all(dimensions.values())
+            else dimensions
+        )
+
+    actual_sources = sources_by_collection.get("detail_128", set())
+    ready = (
+        bool(index_status.get("ready"))
+        and not missing_by_collection
+        and not dimension_mismatches
+    )
+    return {
+        "expected_sources": sorted(expected_sources),
+        "actual_sources": sorted(actual_sources),
+        "missing_sources": sorted(expected_sources - actual_sources),
+        "sources_by_collection": {
+            name: sorted(sources) for name, sources in sources_by_collection.items()
+        },
+        "missing_by_collection": missing_by_collection,
+        "expected_embedding_dimension": expected_dimension,
+        "collection_dimensions": dimensions,
+        "dimension_mismatches": dimension_mismatches,
+        "index_status_ready": bool(index_status.get("ready")),
+        "ready": ready,
+    }
+
+
 def main() -> None:
+    from app.config import get_settings
+
     root = _project_root()
-    chroma_dir = root / "backend" / "data" / "chroma_db"
+    settings = get_settings()
+    chroma_dir = resolve_chroma_dir(root, Path(settings.CHROMA_PERSIST_DIR))
     client = chromadb.PersistentClient(path=str(chroma_dir))
 
     report = {}
@@ -110,6 +189,7 @@ def main() -> None:
         except Exception as exc:
             report[name] = {
                 "count": 0,
+                "embedding_dimension": 0,
                 "sources": {},
                 "page_ranges": {},
                 "reference_like_documents": 0,
@@ -118,19 +198,18 @@ def main() -> None:
             }
 
     expected_sources = set(_expected_sources(root))
-    actual_sources = set(report.get("detail_128", {}).get("sources", {}).keys())
-    report["completeness"] = {
-        "expected_sources": sorted(expected_sources),
-        "actual_sources": sorted(actual_sources),
-        "missing_sources": sorted(expected_sources - actual_sources),
-        "ready": expected_sources == actual_sources,
-    }
-    report["index_status"] = _load_index_status(chroma_dir)
+    index_status = _load_index_status(chroma_dir)
+    report["index_status"] = index_status
+    report["completeness"] = build_completeness(
+        expected_sources,
+        report,
+        index_status,
+    )
 
-    report_path = root / "docs" / "index_audit_report.json"
-    report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    output_path = report_path(root, "index_audit_report", chroma_dir)
+    output_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps(report, ensure_ascii=False, indent=2))
-    print(f"\n索引审计报告已写入: {report_path}")
+    print(f"\n索引审计报告已写入: {output_path}")
 
 
 if __name__ == "__main__":

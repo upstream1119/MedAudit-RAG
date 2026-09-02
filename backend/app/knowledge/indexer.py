@@ -85,7 +85,25 @@ class LocalSentenceTransformerEmbeddingFunction:
 
     def __init__(self):
         settings = get_settings()
-        self._model_name = settings.EMBEDDING_MODEL
+        self._model_name = (
+            getattr(settings, "LOCAL_EMBEDDING_MODEL_PATH", "")
+            or settings.EMBEDDING_MODEL
+        )
+        configured_device = getattr(
+            settings,
+            "LOCAL_EMBEDDING_DEVICE",
+            "auto",
+        )
+        self._device = (
+            None
+            if configured_device == "auto"
+            else configured_device
+        )
+        self._batch_size = getattr(
+            settings,
+            "LOCAL_EMBEDDING_BATCH_SIZE",
+            None,
+        )
         try:
             from sentence_transformers import SentenceTransformer
         except ImportError as exc:
@@ -95,17 +113,22 @@ class LocalSentenceTransformerEmbeddingFunction:
                 "并确认本地模型已下载或可访问。"
             ) from exc
 
-        self._model = SentenceTransformer(self._model_name)
+        model_kwargs = {}
+        if self._device is not None:
+            model_kwargs["device"] = self._device
+        self._model = SentenceTransformer(self._model_name, **model_kwargs)
 
     def __call__(self, input: list[str]) -> list[list[float]]:
         """批量生成本地 Embedding 向量。"""
         if not input:
             return []
-        embeddings = self._model.encode(
-            input,
-            normalize_embeddings=True,
-            show_progress_bar=False,
-        )
+        encode_kwargs = {
+            "normalize_embeddings": True,
+            "show_progress_bar": False,
+        }
+        if self._batch_size is not None:
+            encode_kwargs["batch_size"] = self._batch_size
+        embeddings = self._model.encode(input, **encode_kwargs)
         if hasattr(embeddings, "tolist"):
             return embeddings.tolist()
         return [list(row) for row in embeddings]
@@ -198,6 +221,23 @@ class VectorIndexer:
             except Exception:
                 stats[name] = 0
         return stats
+
+    def get_collection_dimensions(self) -> dict[str, int]:
+        """从各 Collection 的真实向量读取维度，供构建后审计。"""
+        dimensions = {}
+        for name in _COLLECTION_NAMES.values():
+            try:
+                collection = self._chroma.get_collection(name=name)
+                result = collection.get(limit=1, include=["embeddings"])
+                embeddings = result.get("embeddings")
+                dimensions[name] = (
+                    len(embeddings[0])
+                    if embeddings is not None and len(embeddings) > 0
+                    else 0
+                )
+            except Exception:
+                dimensions[name] = 0
+        return dimensions
 
     # ── 内部方法 ──
 

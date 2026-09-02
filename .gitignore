@@ -75,8 +75,8 @@ docs/test_runs/
 docs/superpowers/
 docs/clinical_expert_review.md
 docs/project_proposal.md
-docs/index_audit_report.json
-docs/index_rebuild_summary.json
+docs/index_audit_report*.json
+docs/index_rebuild_summary*.json
 
 # Local helper scripts with machine-specific paths
 start-dev.ps1

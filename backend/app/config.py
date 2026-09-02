@@ -57,6 +57,48 @@ class Settings(BaseSettings):
         default="embedding-3",
         description="向量 Embedding 模型"
     )
+    LOCAL_EMBEDDING_MODEL_PATH: str = Field(
+        default="",
+        description="本地 Embedding 模型目录；为空时使用 EMBEDDING_MODEL",
+    )
+    LOCAL_EMBEDDING_DEVICE: Literal["auto", "cpu", "cuda"] = Field(
+        default="auto",
+        description="本地 Embedding 推理设备",
+    )
+    LOCAL_EMBEDDING_BATCH_SIZE: int = Field(
+        default=4,
+        ge=1,
+        description="本地 Embedding 编码批大小",
+    )
+    LOCAL_EMBEDDING_DIMENSION: int = Field(
+        default=0,
+        ge=0,
+        description="本地 Embedding 预期向量维度；0 表示不做维度门控",
+    )
+
+    # ── 本地重排模型（Phase 7 C1c-4；实际重排逻辑由实验管线启用） ──
+    RERANKER_MODEL: str = Field(
+        default="BAAI/bge-reranker-v2-m3",
+        description="本地证据重排模型标识",
+    )
+    RERANKER_MODEL_PATH: str = Field(
+        default="",
+        description="本地重排模型目录；为空时使用 RERANKER_MODEL",
+    )
+    RERANKER_DEVICE: Literal["auto", "cpu", "cuda"] = Field(
+        default="auto",
+        description="本地重排模型推理设备",
+    )
+    RERANKER_BATCH_SIZE: int = Field(
+        default=4,
+        ge=1,
+        description="本地重排模型批大小",
+    )
+    RERANKER_CANDIDATE_K: int = Field(
+        default=20,
+        ge=1,
+        description="进入重排阶段的候选证据数",
+    )
 
     # ── 向量检索 ──
     CHROMA_PERSIST_DIR: str = Field(

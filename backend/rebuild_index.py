@@ -2,7 +2,7 @@
 重建 Medaudit-RAG 知识库索引。
 
 执行内容：
-1. 清空 backend/data/chroma_db
+1. 清空配置指定的 ChromaDB 目标目录
 2. 读取 data/guidelines 下的 PDF
 3. 解析 -> 切分 -> 建立三粒度索引
 4. 输出按文档和粒度的重建摘要
@@ -30,6 +30,12 @@ logger = logging.getLogger("rebuild_index")
 
 def _project_root() -> Path:
     return Path(__file__).resolve().parent.parent
+
+
+def report_path(root: Path, stem: str, chroma_dir: Path) -> Path:
+    """为非默认索引生成独立报告文件，避免覆盖旧基线。"""
+    suffix = "" if chroma_dir.name == "chroma_db" else f"_{chroma_dir.name}"
+    return root / "docs" / f"{stem}{suffix}.json"
 
 
 def _guideline_paths(root: Path) -> list[Path]:
@@ -77,6 +83,9 @@ def _build_index_status(
     source_inspections: dict[str, dict[str, object]],
     embedding_provider: str | None = None,
     embedding_model: str | None = None,
+    embedding_model_path: str | None = None,
+    collection_dimensions: dict[str, int] | None = None,
+    expected_embedding_dimension: int | None = None,
 ) -> dict[str, object]:
     expected_sources = [pdf.name for pdf in pdfs]
     indexed_sources = [
@@ -95,18 +104,34 @@ def _build_index_status(
         if inspection.get("scan_heavy")
     ]
     incomplete_sources = sorted(set(missing_sources + scan_heavy_sources))
+    dimensions = collection_dimensions or {}
+    dimension_mismatches = {
+        name: dimensions.get(name, 0)
+        for name in ("detail_128", "concept_512", "context_1024")
+        if expected_embedding_dimension
+        and dimensions.get(name, 0) != expected_embedding_dimension
+    }
+    ready = not incomplete_sources and not dimension_mismatches
 
     return {
-        "ready": not incomplete_sources,
+        "ready": ready,
         "embedding_provider": embedding_provider,
         "embedding_model": embedding_model,
+        "embedding_model_path": embedding_model_path,
+        "expected_embedding_dimension": expected_embedding_dimension,
+        "collection_dimensions": dimensions,
+        "dimension_mismatches": dimension_mismatches,
         "expected_sources": expected_sources,
         "indexed_sources": indexed_sources,
         "missing_sources": missing_sources,
         "scan_heavy_sources": scan_heavy_sources,
         "incomplete_sources": incomplete_sources,
         "source_inspections": source_inspections,
-        "reason": "" if not incomplete_sources else "core guideline PDFs were not fully usable",
+        "reason": (
+            ""
+            if ready
+            else "core guideline PDFs or embedding dimensions were incomplete"
+        ),
     }
 
 
@@ -177,12 +202,26 @@ def main() -> None:
         total_chunk_counter.update({g: len(chunks) for g, chunks in chunks_by_granularity.items()})
         logger.info("完成处理: %s", pdf_path.name)
 
+    collection_dimensions = indexer.get_collection_dimensions()
+    embedding_model_path = (
+        settings.LOCAL_EMBEDDING_MODEL_PATH
+        if settings.EMBEDDING_PROVIDER == "local"
+        else None
+    )
+    expected_embedding_dimension = (
+        settings.LOCAL_EMBEDDING_DIMENSION
+        if settings.EMBEDDING_PROVIDER == "local"
+        else None
+    )
     index_status = _build_index_status(
         pdfs,
         per_doc_summary,
         source_inspections,
         embedding_provider=settings.EMBEDDING_PROVIDER,
         embedding_model=settings.EMBEDDING_MODEL,
+        embedding_model_path=embedding_model_path,
+        collection_dimensions=collection_dimensions,
+        expected_embedding_dimension=expected_embedding_dimension,
     )
 
     summary = {
@@ -195,13 +234,17 @@ def main() -> None:
         "per_document": per_doc_summary,
     }
 
-    summary_path = root / "docs" / "index_rebuild_summary.json"
+    summary_path = report_path(root, "index_rebuild_summary", chroma_dir)
     summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     status_path = chroma_dir / "index_status.json"
     status_path.write_text(json.dumps(index_status, ensure_ascii=False, indent=2), encoding="utf-8")
 
     if not index_status["ready"]:
-        logger.warning("索引未就绪，缺失核心资料: %s", index_status["missing_sources"])
+        logger.warning(
+            "索引未就绪，缺失资料=%s，向量维度异常=%s",
+            index_status["missing_sources"],
+            index_status["dimension_mismatches"],
+        )
     logger.info("索引重建完成，摘要已写入: %s", summary_path)
     logger.info("索引状态已写入: %s", status_path)
 
