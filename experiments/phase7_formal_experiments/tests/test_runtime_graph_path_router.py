@@ -84,6 +84,58 @@ def test_source_condition_match_outranks_generic_source():
     ]
     assert routed["selected_paths"][0]["graph_source_condition_tier"] == 0
     assert routed["selected_paths"][1]["graph_source_condition_tier"] == 1
+    trace = routed["selected_paths"][0]["graph_path_trace"]
+    assert trace == {
+        "trace_version": "phase7-runtime-graph-path-trace-v0.1",
+        "router_version": "phase7-runtime-graph-path-router-v0.1",
+        "route_decision": "selected",
+        "raw_rank": 1,
+        "route_rank": 1,
+        "source_condition_tier": 0,
+        "source_condition_tier_label": "source_condition_exact",
+        "query_constraints": [
+            {
+                "constraint_type": "clinical_condition",
+                "normalized_value": "mycoplasma_pneumoniae_pneumonia",
+            },
+            {
+                "constraint_type": "medication_class",
+                "normalized_value": "corticosteroid",
+            },
+        ],
+        "matched_constraints": [
+            {
+                "constraint_type": "clinical_condition",
+                "normalized_value": "mycoplasma_pneumoniae_pneumonia",
+            },
+            {
+                "constraint_type": "medication_class",
+                "normalized_value": "corticosteroid",
+            },
+        ],
+        "content_matched_constraints": [
+            {
+                "constraint_type": "clinical_condition",
+                "normalized_value": "mycoplasma_pneumoniae_pneumonia",
+            },
+            {
+                "constraint_type": "medication_class",
+                "normalized_value": "corticosteroid",
+            },
+        ],
+        "source_matched_constraints": [
+            {
+                "constraint_type": "clinical_condition",
+                "normalized_value": "mycoplasma_pneumoniae_pneumonia",
+            }
+        ],
+        "candidate": {
+            "candidate_key": "detail::specific",
+            "source_file": "MPP诊疗指南.pdf",
+            "page_number": 10,
+        },
+    }
+    module.assert_no_gold_only_content(trace)
 
 
 def test_routing_enforces_page_source_and_total_quotas():

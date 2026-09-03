@@ -22,6 +22,12 @@ from experiments.phase7_formal_experiments import runtime_graph_path_router as p
 F_METHOD = "f_exact_hybrid_reranker_dedup"
 G1_METHOD = "g1_exact_graph_expand_reranker_dedup"
 RUNTIME_FIELDS = {"sample_id", "question", "dataset_version", "kb_version"}
+_TRACE_LIST_FIELDS = (
+    "query_constraints",
+    "matched_constraints",
+    "content_matched_constraints",
+    "source_matched_constraints",
+)
 
 
 def sha256_file(path: Path) -> str:
@@ -302,6 +308,61 @@ def _release_model(model: Any) -> None:
         pass
 
 
+def _validate_graph_path_trace(candidate: dict[str, Any]) -> dict[str, Any]:
+    trace = candidate.get("graph_path_trace")
+    if not isinstance(trace, dict):
+        raise ValueError("graph path trace is missing")
+    if trace.get("trace_version") != path_router.PATH_TRACE_VERSION:
+        raise ValueError("graph path trace version mismatch")
+    if trace.get("router_version") != path_router.ROUTER_VERSION:
+        raise ValueError("graph path trace router version mismatch")
+    if trace.get("route_decision") != "selected":
+        raise ValueError("graph path trace route decision is invalid")
+
+    identity = trace.get("candidate")
+    expected_identity = {
+        "candidate_key": str(candidate.get("candidate_key", "")),
+        "source_file": str(candidate.get("source_file", "")),
+        "page_number": int(candidate.get("page_number", 0) or 0),
+    }
+    if identity != expected_identity:
+        raise ValueError("graph path trace candidate identity mismatch")
+    if trace.get("route_rank") != candidate.get("graph_route_rank"):
+        raise ValueError("graph path trace route rank mismatch")
+    if trace.get("source_condition_tier") != candidate.get(
+        "graph_source_condition_tier"
+    ):
+        raise ValueError("graph path trace source tier mismatch")
+
+    for field in _TRACE_LIST_FIELDS:
+        records = trace.get(field)
+        if not isinstance(records, list):
+            raise ValueError(f"graph path trace {field} must be a list")
+        for record in records:
+            if not isinstance(record, dict) or set(record) != {
+                "constraint_type",
+                "normalized_value",
+            }:
+                raise ValueError(f"graph path trace {field} record is invalid")
+            if not all(isinstance(value, str) and value for value in record.values()):
+                raise ValueError(f"graph path trace {field} value is invalid")
+        if records != sorted(
+            records,
+            key=lambda record: (
+                record["constraint_type"],
+                record["normalized_value"],
+            ),
+        ):
+            raise ValueError(f"graph path trace {field} is not deterministic")
+
+    if not trace["matched_constraints"] or not trace[
+        "content_matched_constraints"
+    ]:
+        raise ValueError("graph path trace matched constraints are empty")
+    assert_no_gold_only_content(trace)
+    return trace
+
+
 def build_paired_sample(
     *,
     sample_id: str,
@@ -364,6 +425,19 @@ def build_paired_sample(
     ) and protected_prefix_keys.issubset(g1_key_set)
     if not baseline_prefix_preserved:
         raise RuntimeError("Protected baseline prefix was replaced")
+    graph_candidates = [
+        item
+        for item in g1_pool
+        if item.get("candidate_origin") == "graph_expansion"
+    ]
+    graph_trace_required = runtime_path_catalog is not None
+    graph_traces = []
+    for candidate in graph_candidates:
+        if candidate.get("graph_path_trace") is not None:
+            graph_traces.append(_validate_graph_path_trace(candidate))
+        elif graph_trace_required:
+            raise ValueError("graph path trace is missing")
+    graph_trace_complete = len(graph_traces) == len(graph_candidates)
     row = {
         "sample_id": sample_id,
         "question": question,
@@ -400,6 +474,15 @@ def build_paired_sample(
             "graph_candidate_count": sum(
                 item.get("candidate_origin") == "graph_expansion" for item in g1_pool
             ),
+            "graph_trace_required": graph_trace_required,
+            "graph_trace_version": (
+                path_router.PATH_TRACE_VERSION if graph_trace_required else None
+            ),
+            "graph_trace_count": len(graph_traces),
+            "graph_trace_complete": graph_trace_complete,
+            "graph_trace_sha256": hashlib.sha256(
+                _json_bytes(graph_traces)
+            ).hexdigest(),
             "added_candidate_keys": sorted(g1_key_set - f_key_set),
             "replaced_candidate_keys": sorted(f_key_set - g1_key_set),
             "zero_expansion": not bool(g1_key_set - f_key_set),
@@ -514,6 +597,11 @@ def run_paired_retrieval(
             graph_index,
             runtime_lexicon,
         )
+        expected_trace_version = config.get("graph_path_trace_version")
+        if expected_trace_version is not None and (
+            expected_trace_version != path_router.PATH_TRACE_VERSION
+        ):
+            raise ValueError("graph_path_trace_version mismatch")
     runtime_rows = _read_jsonl(runtime_projection_path)
     exact_rows = _read_jsonl(exact_results_path)
     assert_no_gold_only_content(exact_rows)
@@ -659,6 +747,11 @@ def run_paired_retrieval(
         "graph_index_sha256": graph_index_sha,
         "router_version": (
             path_router.ROUTER_VERSION if runtime_path_catalog is not None else None
+        ),
+        "graph_path_trace_version": (
+            path_router.PATH_TRACE_VERSION
+            if runtime_path_catalog is not None
+            else None
         ),
         "routing_policy": routing_policy,
         **frozen,

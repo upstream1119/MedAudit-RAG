@@ -1,6 +1,6 @@
 # Phase 7 Formal Experiments
 
-本目录用于运行冻结 Benchmark、检索配置选择与生成侧配对实验。当前已完成 Benchmark120 的作者双轮核验与冻结、Validation40 输入隔离、Phase 7-C1c-4d 强非图基线选择，以及 `C1c-4e-3a` 的前缀稳定 matched-compute `F24/G1-v0.4` 配对实验。`G1-v0.4` 在 Validation40 开发集上的候选严格来源页召回@24由 `21/40` 提高至 `26/40`，最终严格来源页召回@4由 `20/40` 提高至 `22/40`，但当前不声称统计显著性。下一步先补齐 graph path provenance，再进入 `C1c-4e-3b` G2 图重排；G3 图一致性审计、完整 Graph-enhanced 方法和临床验证结论尚未形成，Pilot Test80 仍未读取。
+本目录用于运行冻结 Benchmark、检索配置选择与生成侧配对实验。当前已完成 Benchmark120 的作者双轮核验与冻结、Validation40 输入隔离、Phase 7-C1c-4d 强非图基线选择、`C1c-4e-3a` 前缀稳定 matched-compute `F24/G1-v0.4` 配对实验，以及 `C1c-4e-3a-provenance` 图候选路径可审计化。`G1-v0.4` 在 Validation40 开发集上的候选严格来源页召回@24由 `21/40` 提高至 `26/40`，最终严格来源页召回@4由 `20/40` 提高至 `22/40`；新增 provenance 不改变候选或最终证据排序，40/40 样本、69/69 条图候选均具有完整路径记录。下一步进入 `C1c-4e-3b` G2 图重排；当前不声称统计显著性，G3 图一致性审计、完整 Graph-enhanced 方法和临床验证结论尚未形成，Pilot Test80 仍未读取。
 
 ## 当前输入
 
@@ -1144,3 +1144,26 @@ D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_expe
 - 预声明裁决为 `freeze_g1_candidate_expansion`，仅冻结 Validation40 开发配置中的 G1 候选扩展。候选层双侧 McNemar `p=0.0625`，最终层 `p=0.5`，当前不声称统计显著性。
 - 5 个新增 Gold 候选均由图扩展加入，但输出候选尚未携带完整 graph path trace。下一步先补齐 provenance，再进入 `C1c-4e-3b` G2 图重排。
 - 正式产物位于 `revision/phase7/c1c4e/validation40_f24_g1v04_prefix_stable/`；Pilot Test80 未读取，外部模型/API、input/output tokens 和费用均为 0。
+
+### C1c-4e-3a-provenance：图候选路径可审计化
+
+Gold-free 配对检索：
+
+```powershell
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\validation40_graph_candidate_paired_retrieval.py `
+  --config experiments\phase7_formal_experiments\configs\validation40_graph_candidate_paired_retrieval_v0_5.json `
+  --repo-root .
+
+# 独立运行 B：必须写入空目录
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\validation40_graph_candidate_paired_retrieval.py `
+  --config experiments\phase7_formal_experiments\configs\validation40_graph_candidate_paired_retrieval_v0_5.json `
+  --repo-root . `
+  --output-dir revision\phase7\c1c4e\validation40_f24_g1v04_provenance\run_b
+```
+
+- 每条经来源路由选中的图候选都保存 `graph_path_trace`，覆盖查询约束、命中约束、内容/来源命中、路由层级与排名、候选键、来源和页码。
+- 评测运行器对 trace 版本、数量、完整性和逐样本 SHA-256 采取 fail-closed 校验；缺失或不完整时直接中止，不允许静默进入后续实验。
+- run_a/run_b 均完成 40 条样本、69 条图候选和 69 条完整 trace；核心结果 SHA-256 同为 `99a33098a89fb28209d092c184c83ca5f4cb56883617c1d952b0657198dac4ae`。
+- 去除新增 trace 与审计字段后，v0.5 的候选顺序和最终 Top-4 与冻结 v0.4 逐项一致，证明该步骤只是可审计化，不构成新的方法收益。
+- 定向回归为 `29 passed`，Phase 6/7/后端相关全量回归为 `545 passed`。两次运行耗时约 `169.46 s` 与 `169.15 s`，峰值 CUDA 显存约 `2620.69 MB`。
+- Pilot Test80 未读取，检索阶段未读取 Gold，外部模型/API 调用、input/output tokens 和费用均为 0。下一步以这些可追溯路径为输入设计并评测 `C1c-4e-3b` G2 图重排。

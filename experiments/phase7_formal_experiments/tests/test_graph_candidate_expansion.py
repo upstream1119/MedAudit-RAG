@@ -93,6 +93,7 @@ def test_source_routed_expansion_prefers_condition_specific_source():
     graph_index = module.build_candidate_graph_index([*baseline, *graph_rows])
     lexicon = _source_routing_lexicon()
     catalog = router.build_runtime_path_catalog(graph_index, lexicon)
+    baseline[0]["graph_path_trace"] = {"stale": True}
 
     expanded = module.expand_candidates(
         "MPP糖皮质激素治疗是否有依据？",
@@ -118,6 +119,13 @@ def test_source_routed_expansion_prefers_condition_specific_source():
     assert expanded[1]["graph_source_condition_tier_label"] == (
         "source_condition_exact"
     )
+    assert "graph_path_trace" not in expanded[0]
+    assert expanded[1]["graph_path_trace"]["candidate"] == {
+        "candidate_key": "detail_128::specific",
+        "source_file": "MPP诊疗指南.pdf",
+        "page_number": 10,
+    }
+    assert expanded[1]["graph_path_trace"]["route_decision"] == "selected"
 
 
 def test_constraint_path_recovers_candidate_missing_from_baseline():

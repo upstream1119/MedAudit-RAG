@@ -36,6 +36,13 @@ V04_CONFIG_PATH = (
     / "configs"
     / "validation40_graph_candidate_paired_retrieval_v0_4.json"
 )
+V05_CONFIG_PATH = (
+    REPO_ROOT
+    / "experiments"
+    / "phase7_formal_experiments"
+    / "configs"
+    / "validation40_graph_candidate_paired_retrieval_v0_5.json"
+)
 
 
 def _load_module(path: Path, name: str):
@@ -162,6 +169,28 @@ def test_v04_config_preserves_top20_and_limits_graph_to_four_reserve_slots():
     assert config["execution_guards"]["external_model_calls"] is False
 
 
+def test_v05_config_adds_provenance_without_changing_frozen_methods():
+    config = json.loads(V05_CONFIG_PATH.read_text(encoding="utf-8"))
+
+    assert config["phase"] == "Phase 7-C1c-4e-3a-provenance"
+    assert config["source_budget"] == 40
+    assert config["baseline_prefix_budget"] == 20
+    assert config["candidate_budget"] == 24
+    assert config["graph_quota"] == 4
+    assert config["f_method"] == "f24_prefix_stable_hybrid_reranker_dedup"
+    assert (
+        config["g1_method"]
+        == "g1_v0_4_prefix_stable_graph_expand_reranker_dedup"
+    )
+    assert (
+        config["graph_path_trace_version"]
+        == "phase7-runtime-graph-path-trace-v0.1"
+    )
+    assert config["execution_guards"]["gold_access"] is False
+    assert config["execution_guards"]["pilot_test_content_access"] is False
+    assert config["execution_guards"]["external_model_calls"] is False
+
+
 def test_paired_sample_routes_graph_candidates_without_changing_f_pool():
     module = _load_module(MODULE_PATH, "paired_retrieval_source_route")
     graph_module = _load_module(GRAPH_MODULE_PATH, "graph_candidate_source_route")
@@ -213,6 +242,50 @@ def test_paired_sample_routes_graph_candidates_without_changing_f_pool():
         "detail_128::graph-specific"
     ]
     assert row["graph_expansion_audit"]["graph_candidate_count"] == 1
+    graph_candidate = next(
+        item
+        for item in g1_candidates
+        if item["candidate_origin"] == "graph_expansion"
+    )
+    assert graph_candidate["graph_path_trace"]["candidate"]["candidate_key"] == (
+        graph_candidate["candidate_key"]
+    )
+    assert row["graph_expansion_audit"]["graph_trace_required"] is True
+    assert row["graph_expansion_audit"]["graph_trace_count"] == 1
+    assert row["graph_expansion_audit"]["graph_trace_complete"] is True
+    assert len(row["graph_expansion_audit"]["graph_trace_sha256"]) == 64
+
+
+def test_graph_path_trace_validation_fails_closed_on_candidate_mismatch():
+    module = _load_module(MODULE_PATH, "paired_retrieval_trace_guard")
+    candidate = _candidate(
+        "detail_128::graph-specific",
+        "图证据：MPP在限定情况下可考虑糖皮质激素。",
+        source_file="MPP诊疗指南.pdf",
+        page_number=10,
+    )
+    candidate["candidate_origin"] = "graph_expansion"
+    candidate["graph_path_trace"] = {
+        "trace_version": "phase7-runtime-graph-path-trace-v0.1",
+        "router_version": "phase7-runtime-graph-path-router-v0.1",
+        "route_decision": "selected",
+        "raw_rank": 1,
+        "route_rank": 1,
+        "source_condition_tier": 0,
+        "source_condition_tier_label": "source_condition_exact",
+        "query_constraints": [],
+        "matched_constraints": [],
+        "content_matched_constraints": [],
+        "source_matched_constraints": [],
+        "candidate": {
+            "candidate_key": "detail_128::different",
+            "source_file": "MPP诊疗指南.pdf",
+            "page_number": 10,
+        },
+    }
+
+    with pytest.raises(ValueError, match="candidate identity mismatch"):
+        module._validate_graph_path_trace(candidate)
 
 
 def test_same_budget_graph_quota_replaces_instead_of_expanding():

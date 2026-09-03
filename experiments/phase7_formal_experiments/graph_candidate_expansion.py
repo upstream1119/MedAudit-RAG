@@ -134,6 +134,7 @@ def _unique_baseline_candidates(candidates: list[dict]) -> list[dict]:
         row["candidate_origin"] = "baseline"
         row.pop("graph_path_match_count", None)
         row.pop("graph_path_constraint_types", None)
+        row.pop("graph_path_trace", None)
         unique.append(row)
     return unique
 

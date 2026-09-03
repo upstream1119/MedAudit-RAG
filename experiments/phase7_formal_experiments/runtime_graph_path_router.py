@@ -15,6 +15,7 @@ from experiments.phase7_formal_experiments.runtime_graph_constraint_extractor im
 
 
 ROUTER_VERSION = "phase7-runtime-graph-path-router-v0.1"
+PATH_TRACE_VERSION = "phase7-runtime-graph-path-trace-v0.1"
 
 
 def _constraint_pairs(constraints: list[dict]) -> set[tuple[str, str]]:
@@ -25,6 +26,18 @@ def _constraint_pairs(constraints: list[dict]) -> set[tuple[str, str]]:
         )
         for constraint in constraints
     }
+
+
+def _sorted_constraint_records(
+    pairs: set[tuple[str, str]],
+) -> list[dict[str, str]]:
+    return [
+        {
+            "constraint_type": constraint_type,
+            "normalized_value": normalized_value,
+        }
+        for constraint_type, normalized_value in sorted(pairs)
+    ]
 
 
 def build_runtime_path_catalog(graph_index: dict, lexicon: dict) -> dict:
@@ -140,6 +153,8 @@ def route_graph_paths(
             continue
         content_pairs = _constraint_pairs(entry["content_constraints"])
         source_pairs = _constraint_pairs(entry["source_constraints"])
+        context_pairs = _constraint_pairs(entry["context_constraints"])
+        matched_pairs = query_pairs & context_pairs
         tier, tier_label = _source_condition_tier(
             query_pairs,
             content_pairs,
@@ -163,6 +178,18 @@ def route_graph_paths(
                 "graph_content_match_types": assessment[
                     "content_matched_constraint_types"
                 ],
+                "_graph_path_trace_input": {
+                    "query_constraints": _sorted_constraint_records(query_pairs),
+                    "matched_constraints": _sorted_constraint_records(
+                        matched_pairs
+                    ),
+                    "content_matched_constraints": _sorted_constraint_records(
+                        matched_pairs & content_pairs
+                    ),
+                    "source_matched_constraints": _sorted_constraint_records(
+                        matched_pairs & source_pairs
+                    ),
+                },
             }
         )
         qualified.append(candidate)
@@ -197,7 +224,29 @@ def route_graph_paths(
         else:
             drop_reason = "selected"
             selected_row = deepcopy(row)
-            selected_row["graph_route_rank"] = len(selected) + 1
+            route_rank = len(selected) + 1
+            selected_row["graph_route_rank"] = route_rank
+            trace_input = selected_row.pop("_graph_path_trace_input")
+            selected_row["graph_path_trace"] = {
+                "trace_version": PATH_TRACE_VERSION,
+                "router_version": ROUTER_VERSION,
+                "route_decision": "selected",
+                "raw_rank": raw_rank,
+                "route_rank": route_rank,
+                "source_condition_tier": int(
+                    selected_row["graph_source_condition_tier"]
+                ),
+                "source_condition_tier_label": str(
+                    selected_row["graph_source_condition_tier_label"]
+                ),
+                **trace_input,
+                "candidate": {
+                    "candidate_key": str(selected_row["candidate_key"]),
+                    "source_file": source,
+                    "page_number": page,
+                },
+            }
+            assert_no_gold_only_content(selected_row["graph_path_trace"])
             selected.append(selected_row)
             source_counts[source] += 1
             source_page_counts[source_page] += 1
