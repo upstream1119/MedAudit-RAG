@@ -1,6 +1,6 @@
 # Phase 7 Formal Experiments
 
-本目录用于运行冻结 Benchmark、检索配置选择与生成侧配对实验。当前已完成 Benchmark120 的作者双轮核验与冻结、Validation40 输入隔离、Phase 7-C1c-4d 强非图基线选择、`C1c-4e-3a` 前缀稳定 matched-compute `F24/G1-v0.4` 配对实验、`C1c-4e-3a-provenance` 图候选路径可审计化，以及 `C1c-4e-3b-1/2` G2 Gold-free 重排与 Gold-only 配对评测。G2 在不改变冻结 G1 候选集合的条件下，将最终严格来源页召回@4由 `22/40` 提高到 `23/40`，最终来源召回保持 `32/40`，并按预声明规则冻结为 Validation40 开发配置。下一步先做 G2 变化样本审计，再进入 `C1c-4e-3c` G3 图一致性审计；当前不声称统计显著性、完整 Graph-enhanced 效果或临床有效性，Pilot Test80 仍未读取。
+本目录用于运行冻结 Benchmark、检索配置选择与生成侧配对实验。当前已完成 Benchmark120 的作者双轮核验与冻结、Validation40 输入隔离、Phase 7-C1c-4d 强非图基线选择、`C1c-4e-3a` 前缀稳定 matched-compute `F24/G1-v0.4` 配对实验、`C1c-4e-3a-provenance` 图候选路径可审计化，以及 `C1c-4e-3b-1/2/3` G2 重排、配对评测与变化样本审计。G2 在不改变冻结 G1 候选集合的条件下，将最终严格来源页召回@4由 `22/40` 提高到 `23/40`，最终来源召回保持 `32/40`；逐题审计同时确认最终严格页 MRR 存在 2 条改善和 1 条下降，因此当前只按预声明规则冻结为 Validation40 开发配置。下一步进入 `C1c-4e-3c` G3 图一致性审计；当前不声称统计显著性、完整 Graph-enhanced 效果或临床有效性，Pilot Test80 仍未读取。
 
 ## 当前输入
 
@@ -1211,3 +1211,20 @@ D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_expe
 - 结果满足预声明条件“最终严格页召回必须提高、最终来源召回不得下降”，因此冻结 `G2-v0.1` 作为 Validation40 开发配置。该裁决不是统计显著性或临床有效性结论。
 - evaluation_a/evaluation_b 的逐题指标、汇总、报告与审计文件逐字节一致；新增代码定向回归为 `13 passed`，当前 Phase 7 全量回归为 `386 passed`。
 - 本步骤外部模型/API 调用、input/output tokens 和费用均为 0。下一步审计唯一新增命中、13 条最终证据变化和 MRR 退化，再进入 `C1c-4e-3c` G3 图一致性审计。
+
+### C1c-4e-3b-3：G2 变化样本观察性审计
+
+```powershell
+$env:PYTHONPATH='.;backend'
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\validation40_graph_path_reranking_change_audit.py `
+  --config experiments\phase7_formal_experiments\configs\validation40_graph_path_reranking_change_audit_v0_1.json `
+  --repo-root .
+```
+
+- 审计器锁定 G2 结果、结果 manifest、逐题 Gold-only 指标、指标 manifest 和 Pilot Test80 五项 SHA-256；Pilot 只校验字节哈希，不解析内容。
+- 审计范围是“最终证据发生变化”或“候选严格页 MRR 发生变化”的并集，共 `15/40` 题；其中最终证据变化 `13` 题，分为集合变化 `7` 题和仅顺序变化 `6` 题。
+- 候选严格页 MRR 的逐题方向为改善 `5`、下降 `1`、不变 `34`；最终严格页 MRR 为改善 `2`、下降 `1`、不变 `37`。
+- G2 新增 1 个最终严格页命中且没有丢失严格页命中；新增样本为 `PMSQA-BV1C-007919f0982f41e86b80`。另有 1 题严格页排名由第 1 位降至第 2 位，说明召回净增不等于所有排序指标同步改善。
+- 两次独立运行的 5 个核心产物逐字节一致；定向测试为 `11 passed`，当前 Phase 7 全量回归为 `397 passed`。
+- 本审计仅报告共现结构与样本级变化，不把路径分数、候选替换或排名变化解释为因果机制。外部模型/API 调用、input/output tokens 和费用均为 0。
+- 下一步先预注册 `C1c-4e-3c` G3 的冲突类型、动作语义和冻结边界，再分别实现 Gold-free 图一致性审计与独立 Gold-only 配对评测。
