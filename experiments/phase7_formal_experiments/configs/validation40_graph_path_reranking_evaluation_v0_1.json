@@ -1,0 +1,41 @@
+{
+  "config_version": "phase7-c1c4e3b2-graph-path-reranking-evaluation-v0.1",
+  "summary_version": "phase7-c1c4e3b2-graph-path-reranking-summary-v0.1",
+  "audit_version": "phase7-c1c4e3b2-graph-path-reranking-evaluation-audit-v0.1",
+  "manifest_version": "phase7-c1c4e3b2-graph-path-reranking-evaluation-manifest-v0.1",
+  "phase": "Phase 7-C1c-4e-3b-2",
+  "purpose": "Gold-only paired evaluation of frozen Validation40 G1 versus symmetric graph-path reranking G2",
+  "dataset_version": "benchmark-v1.0-guideline-grounded-author-adjudicated",
+  "kb_version": "KB-medium-v1",
+  "results_path": "revision/phase7/c1c4e/validation40_g1_g2_graph_rerank_v0_1/run_a/validation40_g1_g2_graph_rerank_results_v0_1.jsonl",
+  "results_manifest_path": "revision/phase7/c1c4e/validation40_g1_g2_graph_rerank_v0_1/run_a/manifest.json",
+  "gold_path": "revision/benchmark/benchmark_v1/benchmark120_validation40_v1_0.jsonl",
+  "pilot_test_path": "revision/benchmark/benchmark_v1/benchmark120_pilot_test80_v1_0.jsonl",
+  "output_dir": "revision/phase7/c1c4e/validation40_g1_g2_graph_rerank_v0_1/evaluation_a",
+  "expected_results_sha256": "02a0d92877fbf34db431886e090700e02f18e05d40403d361d4c8652fcea939f",
+  "expected_results_manifest_sha256": "85e802b2e609083778ead8565f2f68e2978cb7b7e90017d3be390067888027ad",
+  "expected_gold_sha256": "8f8e0c63e8fa829109df98f3e51d37324c978bf49462ad38f14bfe6f67c2e1f7",
+  "expected_pilot_test_sha256": "14afa2988d9ff579471f2d082f9803ce3bfc9e030eb439e7cf2d4c6fa55d5da9",
+  "expected_count": 40,
+  "candidate_budget": 24,
+  "candidate_output_field": "candidates_top24",
+  "final_evidence_k": 4,
+  "g1_method": "g1_v0_4_prefix_stable_graph_expand_reranker_dedup",
+  "g2_method": "g2_v0_1_symmetric_graph_path_reranker_dedup",
+  "sample_metrics_filename": "validation40_g1_g2_graph_rerank_sample_metrics_v0_1.jsonl",
+  "summary_filename": "validation40_g1_g2_graph_rerank_summary_v0_1.json",
+  "report_filename": "validation40_g1_g2_graph_rerank_report_v0_1.md",
+  "audit_filename": "validation40_g1_g2_graph_rerank_evaluation_audit_v0_1.json",
+  "manifest_filename": "manifest.json",
+  "freeze_rule": {
+    "final_strict_recall_at_4_must_improve": true,
+    "final_source_recall_at_4_must_not_degrade": true,
+    "equal_strict_mrr_gain_is_diagnostic_only": true
+  },
+  "execution_guards": {
+    "validation40_gold_only": true,
+    "pilot_test_content_access": false,
+    "external_model_calls": false,
+    "clinical_validation_claimed": false
+  }
+}

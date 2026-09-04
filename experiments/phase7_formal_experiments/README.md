@@ -1,6 +1,6 @@
 # Phase 7 Formal Experiments
 
-本目录用于运行冻结 Benchmark、检索配置选择与生成侧配对实验。当前已完成 Benchmark120 的作者双轮核验与冻结、Validation40 输入隔离、Phase 7-C1c-4d 强非图基线选择、`C1c-4e-3a` 前缀稳定 matched-compute `F24/G1-v0.4` 配对实验，以及 `C1c-4e-3a-provenance` 图候选路径可审计化。`G1-v0.4` 在 Validation40 开发集上的候选严格来源页召回@24由 `21/40` 提高至 `26/40`，最终严格来源页召回@4由 `20/40` 提高至 `22/40`；新增 provenance 不改变候选或最终证据排序，40/40 样本、69/69 条图候选均具有完整路径记录。下一步进入 `C1c-4e-3b` G2 图重排；当前不声称统计显著性，G3 图一致性审计、完整 Graph-enhanced 方法和临床验证结论尚未形成，Pilot Test80 仍未读取。
+本目录用于运行冻结 Benchmark、检索配置选择与生成侧配对实验。当前已完成 Benchmark120 的作者双轮核验与冻结、Validation40 输入隔离、Phase 7-C1c-4d 强非图基线选择、`C1c-4e-3a` 前缀稳定 matched-compute `F24/G1-v0.4` 配对实验、`C1c-4e-3a-provenance` 图候选路径可审计化，以及 `C1c-4e-3b-1/2` G2 Gold-free 重排与 Gold-only 配对评测。G2 在不改变冻结 G1 候选集合的条件下，将最终严格来源页召回@4由 `22/40` 提高到 `23/40`，最终来源召回保持 `32/40`，并按预声明规则冻结为 Validation40 开发配置。下一步先做 G2 变化样本审计，再进入 `C1c-4e-3c` G3 图一致性审计；当前不声称统计显著性、完整 Graph-enhanced 效果或临床有效性，Pilot Test80 仍未读取。
 
 ## 当前输入
 
@@ -1167,3 +1167,47 @@ D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_expe
 - 去除新增 trace 与审计字段后，v0.5 的候选顺序和最终 Top-4 与冻结 v0.4 逐项一致，证明该步骤只是可审计化，不构成新的方法收益。
 - 定向回归为 `29 passed`，Phase 6/7/后端相关全量回归为 `545 passed`。两次运行耗时约 `169.46 s` 与 `169.15 s`，峰值 CUDA 显存约 `2620.69 MB`。
 - Pilot Test80 未读取，检索阶段未读取 Gold，外部模型/API 调用、input/output tokens 和费用均为 0。下一步以这些可追溯路径为输入设计并评测 `C1c-4e-3b` G2 图重排。
+
+### C1c-4e-3b-1：G2 Gold-free 对称图路径重排
+
+运行 A：
+
+```powershell
+$env:PYTHONPATH='.;backend'
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\validation40_graph_path_reranking.py `
+  --config experiments\phase7_formal_experiments\configs\validation40_graph_path_reranking_v0_1.json
+```
+
+独立运行 B：
+
+```powershell
+$env:PYTHONPATH='.;backend'
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\validation40_graph_path_reranking.py `
+  --config experiments\phase7_formal_experiments\configs\validation40_graph_path_reranking_v0_1.json `
+  --output-dir revision\phase7\c1c4e\validation40_g1_g2_graph_rerank_v0_1\run_b
+```
+
+- 输入锁定为 v0.5 的冻结 F24/G1-v0.4 结果、图候选索引、运行时词表和来源路由审计；所有输入均通过 SHA-256 门禁。
+- 对 G1 Top-24 中所有路径可用候选统一重建路径，不以 `candidate_origin` 作为特征；69 条图扩展候选和 16 条原基线候选接受同一公式。
+- 图路径分数由来源特异性、约束类型覆盖、正文约束覆盖和路由倒数排名四项等权组成，单项及总分均限制在 `[0, 1]`，最大调整值为 2.0。
+- 40/40 个候选集合保持不变，85 条路径可用候选均完成重建，69 条既有 trace 全部通过一致性核验；12/40 题没有可用路径并保持原顺序。
+- 28/40 题的候选顺序发生变化，13/40 题的最终证据顺序或集合发生变化；实际最大上下名次变化均为 1。该事实只说明 G2 形成真实排序干预，不代表效果改善。
+- run_a/run_b 核心结果 SHA-256 同为 `02a0d92877fbf34db431886e090700e02f18e05d40403d361d4c8652fcea939f`，实现字节级确定性。
+- 本步骤没有读取 Validation40 Gold；Pilot Test80 只校验字节哈希且仍为 `14afa2988d9ff579471f2d082f9803ce3bfc9e030eb439e7cf2d4c6fa55d5da9`。外部模型/API 调用、input/output tokens 和费用均为 0。
+- G2 定向回归为 `7 passed`，Phase 7 专项回归为 `380 passed`。下一步必须使用独立 Gold-only 评测器比较冻结 G1 与 G2，候选召回应因候选集合相同而保持一致，主要观察最终 Top-4 严格来源页召回、来源召回、MRR 和 added/lost。
+
+### C1c-4e-3b-2：G2 Gold-only 配对评测与冻结
+
+```powershell
+$env:PYTHONPATH='.;backend'
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\validation40_graph_path_reranking_evaluation.py `
+  --config experiments\phase7_formal_experiments\configs\validation40_graph_path_reranking_evaluation_v0_1.json
+```
+
+- 独立评测器只在排序结果冻结后读取 Validation40 Gold；Pilot Test80 仍只做 SHA-256 校验，不解析内容。
+- G1/G2 的 40/40 个候选身份集合完全相同，候选严格来源页召回@24均为 `26/40`（`0.6500`），候选来源召回@24均为 `36/40`（`0.9000`）。
+- G2 将最终严格来源页召回@4由 `22/40`（`0.5500`）提高到 `23/40`（`0.5750`），配对 added/lost 为 `1/0`；最终来源召回@4保持 `32/40`（`0.8000`）。
+- 最终 `±1` 页诊断召回@4由 `25/40` 提高到 `26/40`；最终严格页 MRR 由 `0.4208` 轻微下降到 `0.4188`，候选严格页 MRR由 `0.4061` 下降到 `0.3988`。
+- 结果满足预声明条件“最终严格页召回必须提高、最终来源召回不得下降”，因此冻结 `G2-v0.1` 作为 Validation40 开发配置。该裁决不是统计显著性或临床有效性结论。
+- evaluation_a/evaluation_b 的逐题指标、汇总、报告与审计文件逐字节一致；新增代码定向回归为 `13 passed`，当前 Phase 7 全量回归为 `386 passed`。
+- 本步骤外部模型/API 调用、input/output tokens 和费用均为 0。下一步审计唯一新增命中、13 条最终证据变化和 MRR 退化，再进入 `C1c-4e-3c` G3 图一致性审计。
