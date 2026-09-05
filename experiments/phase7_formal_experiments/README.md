@@ -1228,3 +1228,12 @@ D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_expe
 - 两次独立运行的 5 个核心产物逐字节一致；定向测试为 `11 passed`，当前 Phase 7 全量回归为 `397 passed`。
 - 本审计仅报告共现结构与样本级变化，不把路径分数、候选替换或排名变化解释为因果机制。外部模型/API 调用、input/output tokens 和费用均为 0。
 - 下一步先预注册 `C1c-4e-3c` G3 的冲突类型、动作语义和冻结边界，再分别实现 Gold-free 图一致性审计与独立 Gold-only 配对评测。
+
+### C1c-4e-3c-0：G3 图一致性审计预注册
+
+- 预注册配置为 `configs/validation40_graph_consistency_preregistration_v0_1.json`，锁定冻结 G2 结果、结果 manifest、G2 配置、运行时词表和 Pilot Test80 的 SHA-256。
+- G3-v0.1 首版固定为 `annotate_only`：只审计 G2 最终 Top-4 证据并输出标签、理由和路由动作，不改变 Top-24 候选身份/顺序，也不改变 Top-4 证据身份/顺序。因此本阶段不以检索召回或 MRR 变化作为收益。
+- 标签区分 `corrective_value_mismatch` 与 `evidence_evidence_conflict`。问题提出的值与一致证据不同，可形成基于证据的纠正；只有共享药物强锚点且疾病、人群和证据范围可比较的证据，才允许判定排他值冲突。
+- 冻结动作包括支持回答、纠正性回答、人工复核、证据不足和上游处方边界透传；G3 不新增处方边界分类器。
+- 执行边界要求 Gold-free、Pilot Test80 内容不可见、外部模型调用为 0、40/40 轨迹完整、输入身份与证据顺序恒等、独立运行核心哈希一致；所有非 allow 样本必须经过后续人工裁决。
+- TDD 的 RED 为配置缺失导致 `4 failed`，GREEN 为 `4 passed`；加入契约测试后的 Phase 7 全量回归为 `401 passed`。下一步为 `C1c-4e-3c-1` Gold-free 实现，当前不声称 G3 已完成或带来安全性改善。

@@ -1,0 +1,147 @@
+{
+  "config_version": "phase7-c1c4e3c0-graph-consistency-preregistration-v0.1",
+  "phase": "Phase 7-C1c-4e-3c-0",
+  "purpose": "Preregister a Gold-free, annotation-only graph consistency audit over frozen G2 Top-4 evidence on Validation40",
+  "dataset_version": "benchmark-v1.0-guideline-grounded-author-adjudicated",
+  "kb_version": "KB-medium-v1",
+  "input_results_path": "revision/phase7/c1c4e/validation40_g1_g2_graph_rerank_v0_1/run_a/validation40_g1_g2_graph_rerank_results_v0_1.jsonl",
+  "input_manifest_path": "revision/phase7/c1c4e/validation40_g1_g2_graph_rerank_v0_1/run_a/manifest.json",
+  "g2_config_path": "experiments/phase7_formal_experiments/configs/validation40_graph_path_reranking_v0_1.json",
+  "lexicon_path": "experiments/phase7_formal_experiments/configs/runtime_graph_entity_lexicon_v0_2.json",
+  "pilot_test_path": "revision/benchmark/benchmark_v1/benchmark120_pilot_test80_v1_0.jsonl",
+  "expected_input_results_sha256": "02a0d92877fbf34db431886e090700e02f18e05d40403d361d4c8652fcea939f",
+  "expected_input_manifest_sha256": "85e802b2e609083778ead8565f2f68e2978cb7b7e90017d3be390067888027ad",
+  "expected_g2_config_sha256": "9cbbf9b458da42a45d25ee606d4f848812e072745147c56b14bedbf5ce332312",
+  "expected_lexicon_sha256": "6e251c97a131b2304bc237effbb7f7c8e0e4ed3548d9e7d8882c1b7c7deef08a",
+  "expected_pilot_test_sha256": "14afa2988d9ff579471f2d082f9803ce3bfc9e030eb439e7cf2d4c6fa55d5da9",
+  "expected_count": 40,
+  "candidate_budget": 24,
+  "candidate_output_field": "candidates_top24",
+  "final_evidence_k": 4,
+  "final_evidence_field": "evidence_top4",
+  "input_method": "g2_v0_1_symmetric_graph_path_reranker_dedup",
+  "planned_output_method": "g3_v0_1_graph_consistency_audit",
+  "audit_mode": "annotate_only",
+  "audit_scope": "final_evidence_top4",
+  "mutation_policy": {
+    "allow_candidate_membership_change": false,
+    "allow_candidate_order_change": false,
+    "allow_final_evidence_membership_change": false,
+    "allow_final_evidence_order_change": false
+  },
+  "exclusive_constraint_types": [
+    "dose",
+    "frequency",
+    "route",
+    "monitoring_window",
+    "monitoring_action",
+    "contraindication_action",
+    "evidence_scope"
+  ],
+  "high_risk_coverage_types": [
+    "dose",
+    "frequency",
+    "route",
+    "contraindication_check",
+    "contraindication_action",
+    "drug_interaction",
+    "patient_weight"
+  ],
+  "scope_compatibility": {
+    "shared_strong_anchor_required": true,
+    "strong_anchor_types": [
+      "medication",
+      "medication_class"
+    ],
+    "compatible_context_types": [
+      "clinical_condition",
+      "population_context",
+      "evidence_scope"
+    ],
+    "explicitly_disjoint_context_is_conflict": true,
+    "missing_scope_is_not_comparable": true
+  },
+  "audit_labels": {
+    "supported_match": {
+      "category": "query_evidence",
+      "material_conflict": false,
+      "meaning": "The evidence covers the requested constraint with a compatible value and scope."
+    },
+    "corrective_value_mismatch": {
+      "category": "query_evidence",
+      "material_conflict": false,
+      "meaning": "The query proposes a value that differs from mutually consistent evidence; this supports an evidence-based correction rather than an evidence-conflict finding."
+    },
+    "evidence_evidence_conflict": {
+      "category": "evidence_evidence",
+      "material_conflict": true,
+      "meaning": "Comparable evidence items state different exclusive values for the same constraint type and compatible scope."
+    },
+    "coverage_gap": {
+      "category": "query_evidence",
+      "material_conflict": false,
+      "meaning": "A high-risk constraint requested by the query is not covered by the selected evidence."
+    },
+    "scope_mismatch": {
+      "category": "query_evidence",
+      "material_conflict": true,
+      "meaning": "The selected evidence has an explicitly incompatible disease, population, or evidence scope."
+    },
+    "not_comparable": {
+      "category": "evidence_evidence",
+      "material_conflict": false,
+      "meaning": "Evidence items lack a shared strong anchor or sufficient compatible scope and must not be forced into a conflict judgment."
+    }
+  },
+  "route_actions": [
+    "allow_supported_answer",
+    "allow_corrective_answer",
+    "review_required",
+    "insufficient_evidence",
+    "boundary_refusal_passthrough"
+  ],
+  "route_precedence": [
+    "boundary_refusal_passthrough",
+    "review_required",
+    "insufficient_evidence",
+    "allow_corrective_answer",
+    "allow_supported_answer"
+  ],
+  "route_rules": {
+    "boundary_refusal_passthrough": "Use only an existing upstream boundary-refusal signal; G3 must not create a new prescription-boundary classifier.",
+    "review_required": "Emit when comparable evidence has an exclusive-value conflict or when selected evidence has an explicit scope mismatch.",
+    "insufficient_evidence": "Emit when a requested high-risk constraint has no selected evidence coverage or when no comparable evidence remains.",
+    "allow_corrective_answer": "Emit when evidence is mutually consistent and supports correcting a value proposed in the query.",
+    "allow_supported_answer": "Emit when evidence is mutually consistent and covers the requested constraints with compatible values and scope."
+  },
+  "required_trace_fields": [
+    "sample_id",
+    "input_method",
+    "query_constraints",
+    "evidence_constraints",
+    "pairwise_comparisons",
+    "summary_labels",
+    "route_action",
+    "route_reasons",
+    "candidate_keys",
+    "source_pages",
+    "input_identity_sha256"
+  ],
+  "freeze_rule": {
+    "expected_sample_count": 40,
+    "input_identity_must_match": true,
+    "retrieval_metrics_must_remain_identical": true,
+    "audit_trace_completeness_must_equal_one": true,
+    "independent_run_core_hashes_must_match": true,
+    "all_non_allow_samples_require_manual_adjudication": true,
+    "retrieval_gain_claimed": false,
+    "safety_gain_claimed": false
+  },
+  "execution_guards": {
+    "validation40_only": true,
+    "gold_access": false,
+    "pilot_test_content_access": false,
+    "external_model_calls": false,
+    "clinical_validation_claimed": false
+  }
+}
