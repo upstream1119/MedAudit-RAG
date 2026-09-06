@@ -1,6 +1,6 @@
 # Phase 7 Formal Experiments
 
-本目录用于运行冻结 Benchmark、检索配置选择与生成侧配对实验。当前已完成 Benchmark120 的作者双轮核验与冻结、Validation40 输入隔离、Phase 7-C1c-4d 强非图基线选择、`C1c-4e-3a` 前缀稳定 matched-compute `F24/G1-v0.4` 配对实验、`C1c-4e-3a-provenance` 图候选路径可审计化，以及 `C1c-4e-3b-1/2/3` G2 重排、配对评测与变化样本审计。G2 在不改变冻结 G1 候选集合的条件下，将最终严格来源页召回@4由 `22/40` 提高到 `23/40`，最终来源召回保持 `32/40`；逐题审计同时确认最终严格页 MRR 存在 2 条改善和 1 条下降，因此当前只按预声明规则冻结为 Validation40 开发配置。下一步进入 `C1c-4e-3c` G3 图一致性审计；当前不声称统计显著性、完整 Graph-enhanced 效果或临床有效性，Pilot Test80 仍未读取。
+本目录用于运行冻结 Benchmark、检索配置选择与生成侧配对实验。当前已完成 Benchmark120 的作者双轮核验与冻结、Validation40 输入隔离、Phase 7-C1c-4d 强非图基线选择、`C1c-4e-3a` 前缀稳定 matched-compute `F24/G1-v0.4` 配对实验、`C1c-4e-3a-provenance` 图候选路径可审计化、`C1c-4e-3b-1/2/3` G2 重排与变化样本审计，以及 `C1c-4e-3c-1` G3 Gold-free 图一致性审计。G2 在不改变冻结 G1 候选集合的条件下，将最终严格来源页召回@4由 `22/40` 提高到 `23/40`，最终来源召回保持 `32/40`；G3 保持 40/40 条 G2 候选与 Top-4 证据完整恒等，输出支持回答 26 条、证据不足 7 条、建议复核 7 条。14 条非 allow 样本仍待人工裁决；当前不声称统计显著性、完整 Graph-enhanced 效果或临床有效性，Pilot Test80 仍未读取。
 
 ## 当前输入
 
@@ -1237,3 +1237,28 @@ D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_expe
 - 冻结动作包括支持回答、纠正性回答、人工复核、证据不足和上游处方边界透传；G3 不新增处方边界分类器。
 - 执行边界要求 Gold-free、Pilot Test80 内容不可见、外部模型调用为 0、40/40 轨迹完整、输入身份与证据顺序恒等、独立运行核心哈希一致；所有非 allow 样本必须经过后续人工裁决。
 - TDD 的 RED 为配置缺失导致 `4 failed`，GREEN 为 `4 passed`；加入契约测试后的 Phase 7 全量回归为 `401 passed`。下一步为 `C1c-4e-3c-1` Gold-free 实现，当前不声称 G3 已完成或带来安全性改善。
+
+### C1c-4e-3c-1：G3 Gold-free 图一致性审计
+
+运行 A：
+
+```powershell
+$env:PYTHONPATH='.;backend'
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\validation40_graph_consistency_audit.py `
+  --config experiments\phase7_formal_experiments\configs\validation40_graph_consistency_audit_v0_1.json
+```
+
+独立运行 B：
+
+```powershell
+$env:PYTHONPATH='.;backend'
+D:\anaconda\envs\verimind_MedAudit_env\python.exe experiments\phase7_formal_experiments\validation40_graph_consistency_audit.py `
+  --config experiments\phase7_formal_experiments\configs\validation40_graph_consistency_audit_v0_1.json `
+  --output-dir revision\phase7\c1c4e\validation40_g3_graph_consistency_v0_1\run_b
+```
+
+- G3 只读取冻结 G2 Top-4，并附加 query-evidence、evidence-evidence 比较、汇总标签和路由动作；40/40 条候选对象和 Top-4 证据对象均与 G2 完整恒等。
+- 40/40 条 trace 完整。动作分布为 `allow_supported_answer=26`、`insufficient_evidence=7`、`review_required=7`；14 条非 allow 样本全部写入人工裁决队列。
+- run_a/run_b 的结果、审计、人工队列和 manifest 均逐字节一致。结果 SHA-256 为 `0ac7cfc7b7683be088383cebaf932a43302cade300b36829d7529cfef1eeb341`，人工队列 SHA-256 为 `1f90d7d6e159a4e2d580e3b2f362f55bc7592ee181a0726b904649ff82e0be8f`。
+- TDD 初始实现定向测试为 `12 passed`；加入冻结证据防篡改回归后，预注册与实现联合测试为 `17 passed`，Phase 7 全量回归为 `414 passed`。
+- 本步骤未读取 Validation40 Gold，Pilot Test80 仅做字节哈希校验；外部模型/API、input/output tokens 和费用均为 0。动作分布不是安全收益结论，下一步必须先人工裁决 14 条非 allow 样本，再进入独立 Gold-only 诊断。

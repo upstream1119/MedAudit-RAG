@@ -1,0 +1,13 @@
+{
+  "audit_version": "phase7-c1c4e3c1-graph-consistency-audit-v0.1",
+  "config_version": "phase7-c1c4e3c1-graph-consistency-execution-v0.1",
+  "expected_preregistration_sha256": "c969327c4d7df1d9932e13617c847bffca37c6ffe8528d8d1b8b50d5a595da61",
+  "manifest_filename": "manifest.json",
+  "manifest_version": "phase7-c1c4e3c1-graph-consistency-manifest-v0.1",
+  "manual_queue_filename": "validation40_g3_graph_consistency_manual_queue_v0_1.jsonl",
+  "output_dir": "revision/phase7/c1c4e/validation40_g3_graph_consistency_v0_1/run_a",
+  "phase": "Phase 7-C1c-4e-3c-1",
+  "preregistration_path": "experiments/phase7_formal_experiments/configs/validation40_graph_consistency_preregistration_v0_1.json",
+  "results_filename": "validation40_g3_graph_consistency_results_v0_1.jsonl",
+  "audit_filename": "validation40_g3_graph_consistency_audit_v0_1.json"
+}
